@@ -4012,6 +4012,7 @@ tableHeaders:
   components: Components
   commit: Commit
   condition: Condition
+  controlPlaneCount: Control Plane Count
   count: Count
   customVerbs: Custom Verbs
   dateRange: Date Range
@@ -4141,6 +4142,7 @@ tableHeaders:
   storage: Storage Size
   defaultVersion: Default version
   ipAddress: IP Address
+  workloadCount: Workload Count
 
 target:
   router:
