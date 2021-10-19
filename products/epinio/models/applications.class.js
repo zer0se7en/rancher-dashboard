@@ -3,6 +3,8 @@ import { createEpinioRoute } from '@/products/epinio/utils/custom-routing';
 import EpinioResource from './epinio-resource-instance.class';
 
 export default class EpinioApplication extends EpinioResource {
+  buildCache = {};
+
   get state() {
     return this.active ? '' : 'in-progress';
   }
@@ -84,7 +86,7 @@ export default class EpinioApplication extends EpinioResource {
   // ------------------------------------------------------------------
 
   trace(text, ...args) {
-    console.log(`### Application: ${ text }`, this.id, args);// eslint-disable-line no-console
+    console.log(`### Application: ${ text }`, `${ this.namespace }/${ this.name }`, args);// eslint-disable-line no-console
   }
 
   async create() {
@@ -123,13 +125,15 @@ export default class EpinioApplication extends EpinioResource {
       data: formData
     });
 
-    return res.blobuid;
+    this.buildCache.store = { blobUid: res.blobuid };
+
+    return this.lastBlobUid;
   }
 
   async stage(blobuid, builderImage) {
     this.trace('Staging Application bits');
 
-    return await this.followLink('stage', {
+    const { image, stage } = await this.followLink('stage', {
       method:  'post',
       headers: { 'content-type': 'application/json' },
       data:    {
@@ -141,12 +145,19 @@ export default class EpinioApplication extends EpinioResource {
         builderimage: builderImage
       }
     });
+
+    this.buildCache.stage = {
+      stage,
+      image
+    };
+
+    return { image, stage };
   }
 
   showAppLog() {
     this.$dispatch('wm/open', {
       id:        `epinio-${ this.id }-logs`,
-      label:     this.name,
+      label:     `${ this.name }`,
       product:   EPINIO_PRODUCT_NAME,
       icon:      'file',
       component: 'ApplicationLogs',
@@ -156,7 +167,7 @@ export default class EpinioApplication extends EpinioResource {
 
   showStagingLog(stageId) {
     this.$dispatch('wm/open', {
-      id:        `epinio-${ this.id }-logs`,
+      id:        `epinio-${ this.id }-logs-${ stageId }`,
       label:     `${ this.name } - Staging - ${ stageId }`,
       product:   EPINIO_PRODUCT_NAME,
       icon:      'file',

@@ -1,7 +1,10 @@
 export const EPINIO_PRODUCT_NAME = 'epinio';
 
 export const EPINIO_TYPES = {
-  INSTANCE:  'instance',
-  APP:       'applications',
-  NAMESPACE:      'namespaces'
+  // From API
+  APP:        'applications',
+  NAMESPACE:      'namespaces',
+  // Internal
+  INSTANCE:   'instance',
+  APP_ACTION: 'application-action'
 };

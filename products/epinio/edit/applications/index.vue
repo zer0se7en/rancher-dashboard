@@ -19,7 +19,6 @@ interface Data {
 
 // Data, Methods, Computed, Props
 export default Vue.extend<Data, any, any, any>({
-  // TODO: RC View/Edit ... Refresh on page ... we won't have the namespace so fails
 
   components: {
     Loading,
@@ -57,7 +56,7 @@ export default Vue.extend<Data, any, any, any>({
     return {
       errors:  [],
       source: {
-        tarBall:      null,
+        tarball:      null,
         builderImage: null
       },
       steps:   [{
@@ -79,7 +78,7 @@ export default Vue.extend<Data, any, any, any>({
         name:           'progress',
         label:          this.t('epinio.applications.steps.progress.label'),
         subtext:        this.t('epinio.applications.steps.progress.subtext'),
-        ready:          true,
+        ready:          false,
       }]
     };
   },
@@ -117,50 +116,6 @@ export default Vue.extend<Data, any, any, any>({
       Vue.set(this.source, 'builderImage', change.builderImage);
     },
 
-    async saveOverride(buttonDone: (res: boolean) => void): Promise<void> {
-      this.errors = [];
-      try {
-        delete this.__rehydrate;
-        delete this.__clone;
-
-        const errors = await this.value.validationErrors(this);
-
-        if (!isEmpty(errors)) {
-          return Promise.reject(errors);
-        }
-
-        try {
-          if (this.isCreate) {
-            await this.value.create();
-            const blobuid = await this.value.storeArchive(this.source.tarball);
-            const { image, stage } = await this.value.stage(blobuid, this.source.builderImage);
-
-            this.value.showStagingLog(stage.id);
-            await this.value.waitForStaging(stage.id);
-            await this.value.deploy(stage.id, image);
-          } else {
-            throw new Error('Not implemented');
-          }
-
-          this.done();
-          buttonDone(true);
-        } catch (err) {
-          console.error(err);// eslint-disable-line no-console
-          throw err;
-        } finally {
-          // TODO: RC `find` DOESN'T WORK... id doesn't contain namespace
-          this.$store.dispatch('epinio/findAll', { type: this.value.type, opt: { force: true } });
-          // await this.$dispatch('findAll', { type: this.type, opt: { force: true } });
-        }
-      } catch (e) {
-        this.errors = exceptionToErrorsArray(e);
-        buttonDone(false);
-      }
-    },
-
-    cancel() {
-      this.done();
-    }
   }
 });
 </script>
@@ -175,9 +130,9 @@ export default Vue.extend<Data, any, any, any>({
       :steps="steps"
       :banner-title="t('epinio.applications.create.title')"
       :banner-title-subtext="t('epinio.applications.create.titleSubText')"
-      :finish-mode="action"
-      @cancel="cancel"
-      @finish="saveOverride"
+      finish-mode="done"
+      @cancel="done"
+      @finish="done"
     >
       <template #basics>
         <AppInfo
@@ -199,10 +154,12 @@ export default Vue.extend<Data, any, any, any>({
           :mode="mode"
         ></AppService>
       </template>
-      <template #progress>
+      <template #progress="{step}">
         <AppProgress
           :application="value"
+          :source="source"
           :mode="mode"
+          :step="step"
         ></AppProgress>
       </template>
     </Wizard>

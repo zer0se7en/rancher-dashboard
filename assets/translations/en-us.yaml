@@ -543,6 +543,10 @@ asyncButton:
     action: Rotate
     waiting: Rotating&hellip;
     success: Rotated
+  run:
+    action: Run
+    waiting: Running&hellip;
+    success: Completed
   snapshot:
     action: Snapshot Now
     waiting: Snapshotting&hellip;
@@ -6001,5 +6005,25 @@ epinio:
       progress:
         label: Progress
         subtext: Status of create
+        table:
+          stage:
+            label: Stage
+          description: Description
+          status: Status
+          run:
+            label: Run
+    action:
+      create:
+        label: Create
+        description: The Application will be created ready to apply source to it
+      upload:
+        label: Upload
+        description: Upload the source for the Application
+      build:
+        label: Build
+        description: Build the source for the Application
+      deploy:
+        label: Deploy
+        description: Deploy and start the Application
   namespaceName:
     name: Name

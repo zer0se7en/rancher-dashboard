@@ -66,8 +66,11 @@ export function init(store) {
     to:                  rootEpinioRoute()
   });
 
+  // Internal Types
   configureType(EPINIO_TYPES.INSTANCE, { customRoute: createEpinioRoute('c-cluster-resource', { resource: EPINIO_TYPES.INSTANCE }) });
+  componentForType(EPINIO_TYPES.APP_ACTION, undefined, EPINIO_PRODUCT_NAME);
 
+  // App resource
   weightType(EPINIO_TYPES.APP, 200, true);
   componentForType(EPINIO_TYPES.APP, undefined, EPINIO_PRODUCT_NAME);
   configureType(EPINIO_TYPES.APP, {
@@ -81,6 +84,7 @@ export function init(store) {
     customRoute:          createEpinioRoute('c-cluster-resource', { resource: EPINIO_TYPES.APP }),
   });
 
+  // Namespace resource
   weightType(EPINIO_TYPES.NAMESPACE, 100, true);
   componentForType(EPINIO_TYPES.NAMESPACE, undefined, EPINIO_PRODUCT_NAME);
   configureType(EPINIO_TYPES.NAMESPACE, {
