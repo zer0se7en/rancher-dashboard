@@ -65,9 +65,9 @@ export default {
           return res;
         } else {
           const out = res.data || {};
-
           const schema = getters.schemaFor(type);
 
+          // TODO: API - namespaces call returns array of strings!
           if (Array.isArray(out)) {
             res.data = {
               data: out.map(o => ({
@@ -77,7 +77,7 @@ export default {
               }))
             };
           } else {
-            // `find` action turns this into `{data: out}`
+          // `find` action turns this into `{data: out}`
             res.data = {
               ...out,
               id: createId(schema, out),
@@ -146,7 +146,7 @@ export default {
         product:           EPINIO_PRODUCT_NAME,
         id:                EPINIO_TYPES.NAMESPACE,
         type:              'schema',
-        links:             { collection: 'api/v1/namespaces' },
+        links:             { collection: '/proxy/api/v1/namespaces' },
         collectionMethods: ['get', 'post'],
       }]
     };
