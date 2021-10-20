@@ -2,21 +2,34 @@
 import Vue, { PropType } from 'vue';
 import Application from '@/products/epinio/models/applications.class';
 import LabeledInput from '@/components/form/LabeledInput.vue';
-// import Select from '@/components/form/Select.vue';
-// import FileSelector from '@/components/form/FileSelector.vue';
+
+import LabeledSelect from '@/components/form/LabeledSelect.vue';
+import FileSelector from '@/components/form/FileSelector.vue';
+import RadioGroup from '@/components/form/RadioGroup.vue';
+
+import { APPLICATION_SOURCE_TYPE } from './app-types';
 
 interface Data {
   errors: string[],
-  tarball: string,
-  builderImage: string,
+  archive: {
+    tarball: string,
+    builderImage: string,
+    defaultBuilderImage: boolean
+  },
+  containerUrl: any
 }
+
+const DEFAULT_BUILD_PACK = 'paketobuildpacks/builder:full';
 
 // Data, Methods, Computed, Props
 export default Vue.extend<Data, any, any, any>({
 
-  components: { LabeledInput },
-  // Select
-  // FileSelector,
+  components: {
+    FileSelector,
+    LabeledInput,
+    LabeledSelect,
+    RadioGroup
+  },
 
   props: {
     application: {
@@ -31,9 +44,27 @@ export default Vue.extend<Data, any, any, any>({
 
   data() {
     return {
-      errors:              [],
-      tarball:             '',
-      builderImage:        'paketobuildpacks/builder:full',
+      errors: [],
+
+      archive: {
+        tarball:             '',
+        builderImage:        DEFAULT_BUILD_PACK,
+        fileName:            '',
+        defaultBuilderImage: true
+      },
+
+      containerUrl: { url: undefined },
+
+      types:        [{
+        label: this.t('epinio.applications.steps.source.archive.label'),
+        value: APPLICATION_SOURCE_TYPE.ARCHIVE
+      }, {
+        label: this.t('epinio.applications.steps.source.containerUrl.label'),
+        value: APPLICATION_SOURCE_TYPE.CONTAINER_URL
+      },
+      ],
+      type: APPLICATION_SOURCE_TYPE.ARCHIVE,
+      APPLICATION_SOURCE_TYPE
     };
   },
 
@@ -42,81 +73,121 @@ export default Vue.extend<Data, any, any, any>({
   },
 
   methods: {
-    onFileSelected(value: { name: string, value: any }) {
-      const file = this.$refs.file.files[0];
-      // lastModified: 1633451677134
-      // lastModifiedDate: Tue Oct 05 2021 17:34:37 GMT+0100 (British Summer Time) {}
-      // name: "sample-app.tar.gz"
-      // size: 256
-      // type: "application/gzip"
-      // webkitRelativePath: ""
-
-      this.tarball = file;
+    onFileSelected(file: File) {
+      this.archive.tarball = file;
+      this.archive.fileName = file.name;
 
       this.update();
-
-      // const { name: fileName, value: fileContent, ...others } = value;
-
-      // console.log(fileName, fileContent, others); // eslint-disable-line no-console
-      // this.tarball = value;
     },
 
     update() {
-      this.$emit('change', { tarball: this.tarball, builderImage: this.builderImage });
-    }
+      switch (this.type) {
+      case APPLICATION_SOURCE_TYPE.ARCHIVE:
+        this.$emit('change', {
+          type:         APPLICATION_SOURCE_TYPE.ARCHIVE,
+          tarball:      this.archive.tarball,
+          builderImage: this.archive.builderImage
+        });
+        break;
+      case APPLICATION_SOURCE_TYPE.CONTAINER_URL:
+        this.$emit('change', {
+          type: APPLICATION_SOURCE_TYPE.CONTAINER_URL,
+          url:      this.containerUrl.url,
+        });
+        break;
+      }
+    },
 
+    onImageType(defaultBuilderImage: string) {
+      if (defaultBuilderImage) {
+        this.archive.builderImage = DEFAULT_BUILD_PACK;
+      }
+      this.archive.defaultBuilderImage = defaultBuilderImage;
+
+      this.update();
+    }
   },
 
   watch: {
-    builderImage() {
+    type() {
       this.update();
-    }
+    },
+
   }
 });
 </script>
 
 <template>
   <div class="col span-6">
-    <div class="">
-      <!-- TODO: Switch back -->
-      <input
-        id="file"
-        ref="file"
-        type="file"
-        @change="onFileSelected"
-      />
-    <!-- <FileSelector
+    <LabeledSelect
+      v-model="type"
+      label="Source Type"
+      :options="types"
+      :mode="mode"
+      :clearable="false"
+      :reduce="(e) => e.value"
+    />
+
+    <div v-if="type === APPLICATION_SOURCE_TYPE.ARCHIVE">
+      <div class="spacer archive">
+        <h3>{{ t('epinio.applications.steps.source.archive.file.label') }}</h3>
+        <LabeledInput
+          v-model="archive.fileName"
+          :disabled="true"
+          :tooltip="t('epinio.applications.steps.source.archive.file.tooltip')"
+          :label="t('epinio.applications.steps.source.archive.file.inputLabel')"
+        />
+        <FileSelector
           class="role-tertiary add mt-5"
           :label="t('generic.readFromFile')"
-          :include-file-name="true"
           :mode="mode"
-          :read-as-data-url="true"
+          :raw-data="true"
           @selected="onFileSelected"
-        /> -->
+        />
+      </div>
+      <div class="spacer">
+        <RadioGroup
+          name="defaultBuilderImage"
+          :value="archive.defaultBuilderImage"
+          :labels="[t('epinio.applications.steps.source.archive.builderimage.default'), t('epinio.applications.steps.source.archive.builderimage.custom')]"
+          :options="[true, false]"
+          :label-key="'epinio.applications.steps.source.archive.builderimage.label'"
+          @input="onImageType"
+        />
+        <LabeledInput
+          v-model="archive.builderImage"
+          :disabled="archive.defaultBuilderImage"
+          :tooltip="t('epinio.applications.steps.source.archive.builderimage.tooltip')"
+          :mode="mode"
+          @input="update"
+        />
+      </div>
     </div>
-    <div class="spacer">
-      <LabeledInput
-        v-model="builderImage"
-        :label="t('epinio.applications.create.builderimage.label')"
-        :tooltip="t('epinio.applications.create.builderimage.tooltip')"
-        :mode="mode"
-      />
-      <!-- <Select
-        v-model="builderImage"
-        :mode="mode"
-        :searchable="true"
-        :clearable="false"
-        :options="builderImageOptions"
-      /> -->
-    </div>
+    <div v-if="type === APPLICATION_SOURCE_TYPE.CONTAINER_URL">
+      <div class="spacer archive">
+        <h3>{{ t('epinio.applications.steps.source.containerUrl.url.label') }}</h3>
+        <LabeledInput
+          v-model="containerUrl.url"
+          :tooltip="t('epinio.applications.steps.source.containerUrl.url.tooltip')"
+          :label="t('epinio.applications.steps.source.containerUrl.url.inputLabel')"
+          @input="update"
+        />
+      </div>
     <!-- <br><br> -->
     <!-- Debug<br>
         Mode: {{ mode }}<br>
         Value: {{ JSON.stringify(value) }}<br>
         originalValue: {{ JSON.stringify(originalValue) }}<br> -->
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-
+.archive {
+  display: flex;
+  flex-direction: column;
+  .file-selector {
+        align-self: end;
+  }
+}
 </style>

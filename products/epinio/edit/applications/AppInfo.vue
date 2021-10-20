@@ -11,12 +11,14 @@ import { sortBy } from '@/utils/sort';
 interface Data {
   errors: string[],
   values: {
-    nameNamespace: {
-        name: string,
-        namespace: string
+    meta: {
+      name: string,
+      namespace: string
     },
-    instances: number,
-    envvars: {}
+    configuration: {
+      instances: number,
+      environment: {}
+    }
   }
 }
 
@@ -44,18 +46,21 @@ export default Vue.extend<Data, any, any, any>({
     return {
       errors:        [],
       values: {
-        nameNamespace: {
-          name:      this.application.name,
-          namespace: this.application.namespace
+        meta: {
+          name:      this.application.meta.name,
+          namespace: this.application.meta.namespace
         },
-        instances: this.application.instances || 1,
-        envvars:   this.application.envvars
+        configuration: {
+          instances:   this.application.configuration?.instances || 1,
+          environment:   this.application.configuration?.environment || {}
+        },
+        envvars: {}
       }
     };
   },
 
   watch: {
-    'values.instances'() {
+    'values.configuration.instances'() {
       this.update();
     },
   },
@@ -69,10 +74,8 @@ export default Vue.extend<Data, any, any, any>({
   methods: {
     update() {
       this.$emit('change', {
-        name:      this.values.nameNamespace.name,
-        namespace: this.values.nameNamespace.namespace,
-        instances: this.values.instances,
-        envvars:   this.values.envvars
+        meta:          this.values.meta,
+        configuration: this.values.configuration,
       });
     },
 
@@ -86,10 +89,9 @@ export default Vue.extend<Data, any, any, any>({
         return res;
       }, [] as { name: string, value: string }[]);
 
-      Vue.set(this.values, 'envvars', env);
+      Vue.set(this.values.configuration, 'environment', env);
       this.update();
     }
-
   },
 
 });
@@ -103,14 +105,14 @@ export default Vue.extend<Data, any, any, any>({
         namespace-key="namespace"
         :namespaces-override="namespaces"
         :description-hidden="true"
-        :value="values.nameNamespace"
+        :value="values.meta"
         :mode="mode"
         @change="update"
       />
     </div>
     <div class="col span-6">
       <LabeledInput
-        v-model.number="values.instances"
+        v-model.number="values.configuration.instances"
         type="number"
         min="0"
         required
@@ -120,9 +122,10 @@ export default Vue.extend<Data, any, any, any>({
     </div>
     <div class="spacer"></div>
     <div class="col span-8">
+      <!-- TODO: RC show current env vars if editing -->
       <KeyValue
         :mode="mode"
-        :value="values.envvars"
+        :value="values.configuration.environment"
         :title="t('epinio.applications.create.envvar.title')"
         :key-label="t('epinio.applications.create.envvar.keyLabel')"
         :key-name="t('epinio.applications.create.envvar.keyName')"
@@ -133,7 +136,3 @@ export default Vue.extend<Data, any, any, any>({
     </div>
   </div>
 </template>
-
-<style lang="scss" scoped>
-
-</style>

@@ -1,4 +1,5 @@
 import { Resource } from '@/plugins/core-store/resource-class';
+import { APPLICATION_SOURCE_TYPE } from '@/products/epinio/edit/applications/app-types';
 import { epinioExceptionToErrorsArray } from '@/products/epinio/utils/errors';
 import Vue from 'vue';
 
@@ -95,10 +96,15 @@ export default class ApplicationActionResource extends Resource {
     await this.application.waitForStaging(stage.id);
   }
 
-  async deploy() {
+  async deploy({ source }) {
     this.application.showAppLog();
-    await this.application.deploy(this.application.buildCache.stage.stage.id, this.application.buildCache.stage.image);
+    const stageId = source.type === APPLICATION_SOURCE_TYPE.ARCHIVE ? this.application.buildCache.stage.stage.id : null;
+    const image = source.type === APPLICATION_SOURCE_TYPE.CONTAINER_URL ? source.url : this.application.buildCache.stage.image;
+
+    await this.application.deploy(stageId, image);
   }
+
+  // TODO: RC Wait for `running`?
 
   // Public ---------------------------------------------------
 

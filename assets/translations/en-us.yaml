@@ -5987,9 +5987,6 @@ epinio:
         keyName: name
         valueLabel: Value
         valueName: value
-      builderimage:
-        label: Paketo builder image
-        tooltip: Used for staging
     steps:
       basics:
         label: Details
@@ -5997,6 +5994,23 @@ epinio:
       source:
         label: Source
         subtext: Provide the source
+        archive:
+          label: Archive
+          file:
+            label: Archive File
+            inputLabel: File Name
+            tooltip: This should be a compressed file containing your application
+          builderimage:
+            label: Paketo Builder Image
+            tooltip: Paketo builder image to use for staging
+            default: Default Image
+            custom: Custom Image
+        containerUrl:
+          label: Container Image
+          url:
+            label: Container Image Url
+            inputLabel: Url
+            tooltip: Container Image Url for the app workload image
       services:
         label: Service
         subtext: Bind a service

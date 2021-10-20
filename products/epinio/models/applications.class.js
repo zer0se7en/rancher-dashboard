@@ -1,6 +1,5 @@
 import { EPINIO_PRODUCT_NAME, EPINIO_TYPES } from '@/products/epinio/types';
 import { createEpinioRoute } from '@/products/epinio/utils/custom-routing';
-import { STATES as RESOURCE_STATES } from '@/plugins/core-store/resource-class';
 import EpinioResource from './epinio-resource-instance.class';
 
 // See https://github.com/epinio/epinio/blob/00684bc36780a37ab90091498e5c700337015a96/pkg/api/core/v1/models/app.go#L11
@@ -95,7 +94,7 @@ export default class EpinioApplication extends EpinioResource {
       create: this.getUrl(this.meta.namespace, null),
       store:  `${ this.getUrl() }/store`,
       stage:  `${ this.getUrl() }/stage`,
-      deploy:  `${ this.getUrl() }/deploy`,
+      deploy: `${ this.getUrl() }/deploy`,
       logs:   `${ this.getUrl() }/logs`,
     };
   }
@@ -145,9 +144,9 @@ export default class EpinioApplication extends EpinioResource {
       data: {
         name:          this.meta.name,
         configuration: {
-          instances:   this.configuration.instances, // TODO: RC plumbing
-          services:    this.configuration.services, // TODO: RC plumbing
-          environment: this.configuration.environment // TODO: RC plumbing
+          instances:   this.configuration.instances,
+          services:    this.configuration.services,
+          environment: this.configuration.environment,
         }
       }
     });
@@ -239,6 +238,12 @@ export default class EpinioApplication extends EpinioResource {
   async deploy(stageId, image) {
     this.trace('Deploying Application bits');
 
+    const stage = { };
+
+    if (stageId) {
+      stage.id = stageId;
+    }
+
     const res = await this.followLink('deploy', {
       method:         'post',
       headers: { 'content-type': 'application/json' },
@@ -247,7 +252,7 @@ export default class EpinioApplication extends EpinioResource {
           name:      this.meta.name,
           namespace: this.meta.namespace
         },
-        stage: { id: stageId },
+        stage,
         image
       }
     });

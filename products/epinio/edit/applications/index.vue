@@ -5,8 +5,6 @@ import CreateEditView from '@/mixins/create-edit-view/impl';
 import Loading from '@/components/Loading.vue';
 import Wizard from '@/components/Wizard.vue';
 import { EPINIO_TYPES } from '@/products/epinio/types';
-import { exceptionToErrorsArray } from '@/utils/error';
-import { isEmpty } from '@/utils/object';
 import { _CREATE, _VIEW } from '@/config/query-params';
 import AppInfo from './AppInfo.vue';
 import AppSource from './AppSource.vue';
@@ -105,15 +103,22 @@ export default Vue.extend<Data, any, any, any>({
   },
 
   methods: {
-    update(change: any) {
-      Object.entries(change).forEach(([key, value]: [string, any]) => {
-        Vue.set(this.value, key, value);
+    set(obj: { [key: string]: string}, changes: { [key: string]: string}) {
+      Object.entries(changes).forEach(([key, value]: [string, any]) => {
+        Vue.set(obj, key, value);
       });
     },
 
-    updateSource(change: any) {
-      Vue.set(this.source, 'tarball', change.tarball);
-      Vue.set(this.source, 'builderImage', change.builderImage);
+    updateInfo(changes: any) {
+      this.value.meta = this.value.meta || {};
+      this.value.configuration = this.value.configuration || {};
+      this.set(this.value.meta, changes.meta);
+      this.set(this.value.configuration, changes.configuration);
+    },
+
+    updateSource(changes: any) {
+      this.source = {};
+      this.set(this.source, changes);
     },
 
   }
@@ -138,7 +143,7 @@ export default Vue.extend<Data, any, any, any>({
         <AppInfo
           :application="value"
           :mode="mode"
-          @change="update"
+          @change="updateInfo"
         ></AppInfo>
       </template>
       <template #source>

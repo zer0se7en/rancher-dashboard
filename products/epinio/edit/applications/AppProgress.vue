@@ -1,14 +1,16 @@
 <script lang="ts">
 import Vue, { PropType } from 'vue';
 import Application from '@/products/epinio/models/applications.class';
+import ApplicationAction, { APPLICATION_ACTION_TYPE } from '@/products/epinio/models/application-action.class';
+
 import SortableTable from '@/components/SortableTable/index.vue';
 import Checkbox from '@/components/form/Checkbox.vue';
 import BadgeState from '@/components/BadgeState.vue';
-import ApplicationAction, { APPLICATION_ACTION_TYPE } from '@/products/epinio/models/application-action.class';
-
 import AsyncButton from '@/components/AsyncButton.vue';
 import { STATE, DESCRIPTION, SIMPLE_NAME } from '@/config/table-headers';
 import { EPINIO_TYPES } from '@/products/epinio/types';
+
+import { APPLICATION_SOURCE_TYPE } from './app-types';
 
 interface Data {
   running: boolean;
@@ -32,8 +34,12 @@ export default Vue.extend<Data, any, any, any>({
     },
     source: {
       type: Object as PropType<{
-        tarball: string,
-        builderImage: string,
+        type: APPLICATION_SOURCE_TYPE,
+        // Docker
+        url?: string
+        // Archive
+        tarball?: string,
+        builderImage?: string,
       }>,
       required: true
     },
@@ -54,18 +60,21 @@ export default Vue.extend<Data, any, any, any>({
       type:        EPINIO_TYPES.APP_ACTION,
       index:       0,
     }));
-    this.actions.push(await this.$store.dispatch('epinio/create', {
-      action:      APPLICATION_ACTION_TYPE.UPLOAD,
-      application: this.application,
-      type:        EPINIO_TYPES.APP_ACTION,
-      index:       1,
-    }));
-    this.actions.push(await this.$store.dispatch('epinio/create', {
-      action:      APPLICATION_ACTION_TYPE.BUILD,
-      application: this.application,
-      type:        EPINIO_TYPES.APP_ACTION,
-      index:       2,
-    }));
+    if (this.source.type === APPLICATION_SOURCE_TYPE.ARCHIVE) {
+      this.actions.push(await this.$store.dispatch('epinio/create', {
+        action:      APPLICATION_ACTION_TYPE.UPLOAD,
+        application: this.application,
+        type:        EPINIO_TYPES.APP_ACTION,
+        index:       1,
+      }));
+      this.actions.push(await this.$store.dispatch('epinio/create', {
+        action:      APPLICATION_ACTION_TYPE.BUILD,
+        application: this.application,
+        type:        EPINIO_TYPES.APP_ACTION,
+        index:       2,
+      }));
+    }
+
     this.actions.push(await this.$store.dispatch('epinio/create', {
       action:      APPLICATION_ACTION_TYPE.DEPLOY,
       application: this.application,
@@ -123,6 +132,17 @@ export default Vue.extend<Data, any, any, any>({
   },
 
   methods: {
+    async fetchApp() {
+      try {
+        await this.$store.dispatch('epinio/find', {
+          type: this.application.type,
+          id:   `${ this.application.meta.namespace }/${ this.application.meta.name }`,
+          opt:  { force: true }
+        });
+      } catch (err) {
+
+      }
+    },
 
     async run(buttonDone: (res: boolean) => void) {
       Vue.set(this, 'running', true);
@@ -137,15 +157,12 @@ export default Vue.extend<Data, any, any, any>({
           Vue.set(this, 'running', false);
           console.error(err);// eslint-disable-line no-console
 
+          await this.fetchApp();
+
           return;
-        } finally {
-          this.$store.dispatch('epinio/find', {
-            type: this.application.type,
-            id:   `${ this.application.namespace }/${ this.application.name }`,
-            opt:  { force: true }
-          });
         }
       }
+      await this.fetchApp();
       buttonDone(true);
       Vue.set(this, 'running', false);
     }

@@ -104,6 +104,7 @@ export function init(store) {
   ]);
 
   headers(EPINIO_TYPES.APP, [
+    STATE,
     NAME,
     {
       name:          'namespace',
@@ -113,7 +114,6 @@ export function init(store) {
       formatter:     'LinkDetail',
       formatterOpts: { reference: 'nsLocation' }
     },
-    STATE,
     {
       name:     'dep-status',
       labelKey: 'tableHeaders.status',
