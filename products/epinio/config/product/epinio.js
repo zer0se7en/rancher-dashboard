@@ -104,42 +104,41 @@ export function init(store) {
   ]);
 
   headers(EPINIO_TYPES.APP, [
-    STATE,
-    NAME, {
-    //   name:     'active',
-    //   labelKey: 'epinio.tableHeaders.active',
-    //   value:    'active',
-    //   sort:     ['active'],
-    // }, {
+    NAME,
+    {
       name:          'namespace',
       labelKey:      'epinio.tableHeaders.namespace',
-      value:         'namespace',
-      sort:          ['namespace'],
+      value:         'meta.namespace',
+      sort:          ['meta.namespace'],
       formatter:     'LinkDetail',
       formatterOpts: { reference: 'nsLocation' }
-    }, {
-      name:     'username',
-      labelKey: 'epinio.tableHeaders.owner',
-      value:    'username',
-      sort:     ['username'],
-    }, {
-    //   name:     'status',
-    //   labelKey: 'epinio.tableHeaders.status',
-    //   value:    'status',
-    //   sort:     ['status'],
-    // }, {
+    },
+    STATE,
+    {
+      name:     'dep-status',
+      labelKey: 'tableHeaders.status',
+      value:    'deployment.status',
+      sort:     ['deployment.status'],
+    },
+    {
       name:      'route',
       labelKey:  'epinio.tableHeaders.route',
       value:     'routeLocation',
       sort:      ['route'],
-      formatter:     'Link',
-    }, {
+      formatter: 'Link',
+    },
+    {
       name:      'services',
       labelKey:  'epinio.tableHeaders.boundServices',
-      value:     'bound_services',
-      sort:      ['bound_services'],
-      // formatter:     'List', // TODO: RC bound_services is somehow an empty string... rather than undefined
+      value:     'configuration.services',
+      formatter: 'List',
     },
+    {
+      name:     'deployedBy',
+      labelKey: 'epinio.tableHeaders.deployedBy',
+      value:    'deployment.username',
+      sort:     ['deployment.username'],
+    }
   ]);
 
   headers(EPINIO_TYPES.NAMESPACE, [

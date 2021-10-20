@@ -1,26 +1,72 @@
 import { EPINIO_PRODUCT_NAME, EPINIO_TYPES } from '@/products/epinio/types';
 import { createEpinioRoute } from '@/products/epinio/utils/custom-routing';
+import { STATES as RESOURCE_STATES } from '@/plugins/core-store/resource-class';
 import EpinioResource from './epinio-resource-instance.class';
+
+// See https://github.com/epinio/epinio/blob/00684bc36780a37ab90091498e5c700337015a96/pkg/api/core/v1/models/app.go#L11
+const STATES = {
+  CREATING: 'created',
+  STAGING:  'staging',
+  RUNNING:  'running',
+  ERROR:    'error'
+};
+
+// These map to @/plugins/core-store/resource-class STATES
+const STATES_MAPPED = {
+  [STATES.CREATING]: 'creating',
+  [STATES.STAGING]:  'provisioning',
+  [STATES.RUNNING]:  'running',
+  [STATES.ERROR]:    'error',
+  unknown:           'unknown',
+};
 
 export default class EpinioApplication extends EpinioResource {
   buildCache = {};
 
   get state() {
-    return this.active ? '' : 'in-progress';
+    return STATES_MAPPED[this.status] || STATES_MAPPED.unknown;
   }
 
   get stateObj() {
-    return this.active ? {} : {
-      transitioning: true,
-      message:       this.status
-    };
+    switch (this.status) {
+    case STATES.CREATING:
+      return {
+        error:         false,
+        transitioning: true,
+        message:       this.statusmessage
+      };
+    case STATES.STAGING:
+      return {
+        error:         false,
+        transitioning: true,
+        message:       this.statusmessage
+      };
+    case STATES.RUNNING:
+      return {
+        error:         false,
+        transitioning: false,
+        message:       this.statusmessage
+      };
+    case STATES.ERROR:
+      return {
+        error:         true,
+        transitioning: false,
+        message:       this.statusmessage
+      };
+    default:
+      return {
+        error:         true,
+        transitioning: false,
+        message:       this.statusmessage
+      };
+    }
   }
 
   get _availableActions() {
     return [
       {
         action:     'showAppLog',
-        label:      'View Logs', // TODO: RC tidy after screenshots
+        label:      'View Logs', // TODO: RC i10n
         icon:       'icon icon-fw icon-chevron-right',
         enabled:    this.active,
       },
@@ -30,15 +76,14 @@ export default class EpinioApplication extends EpinioResource {
   }
 
   get routeLocation() {
-    // TODO: RC tidy after screenshots
-    return { url: this.route ? `https://${ this.route }` : '' };
+    return { url: this.deployment?.route ? `https://${ this.deployment?.route }` : '' };
   }
 
   get nsLocation() {
     return createEpinioRoute(`c-cluster-resource-id`, {
       cluster:   this.$rootGetters['clusterId'],
       resource:  EPINIO_TYPES.NAMESPACE,
-      id:       this.namespace
+      id:       this.meta.namespace
     });
   }
 
@@ -47,7 +92,7 @@ export default class EpinioApplication extends EpinioResource {
       update: this.getUrl(),
       self:   this.getUrl(),
       remove: this.getUrl(),
-      create: this.getUrl(this.namespace, null),
+      create: this.getUrl(this.meta.namespace, null),
       store:  `${ this.getUrl() }/store`,
       stage:  `${ this.getUrl() }/stage`,
       deploy:  `${ this.getUrl() }/deploy`,
@@ -55,7 +100,7 @@ export default class EpinioApplication extends EpinioResource {
     };
   }
 
-  getUrl(namespace = this.namespace, name = this.name) {
+  getUrl(namespace = this.meta.namespace, name = this.meta.name) {
     // Add baseUrl in a generic way
     return this.$getters['urlFor'](this.type, this.id, { url: `api/v1/namespaces/${ namespace }/applications/${ name || '' }` });
   }
@@ -64,29 +109,28 @@ export default class EpinioApplication extends EpinioResource {
   // Methods here are required for generic components to handle `namespaced` concept
 
   set metadata(metadata) {
-    this.namespace = metadata.namespace;
-    this.name = metadata.name;
+    this.meta = {
+      namespace: metadata.namespace,
+      name:      metadata.name,
+    };
   }
 
   get metadata() {
-    return {
-      namespace: this.namespace,
-      name:      this.name
-    };
+    return this.meta;
   }
 
   get namespaceLocation() {
     return createEpinioRoute(`c-cluster-resource-id`, {
       cluster:   this.$rootGetters['clusterId'],
       resource:  EPINIO_TYPES.NAMESPACE,
-      id:       this.metadata.namespace,
+      id:       this.meta.namespace,
     });
   }
 
   // ------------------------------------------------------------------
 
   trace(text, ...args) {
-    console.log(`### Application: ${ text }`, `${ this.namespace }/${ this.name }`, args);// eslint-disable-line no-console
+    console.log(`### Application: ${ text }`, `${ this.meta.namespace }/${ this.meta.name }`, args);// eslint-disable-line no-console
   }
 
   async create() {
@@ -99,11 +143,11 @@ export default class EpinioApplication extends EpinioResource {
         accept:         'application/json'
       },
       data: {
-        name:          this.name,
+        name:          this.meta.name,
         configuration: {
-          instances:   1,
-          services:    [],
-          environment: []
+          instances:   this.configuration.instances, // TODO: RC plumbing
+          services:    this.configuration.services, // TODO: RC plumbing
+          environment: this.configuration.environment // TODO: RC plumbing
         }
       }
     });
@@ -138,8 +182,8 @@ export default class EpinioApplication extends EpinioResource {
       headers: { 'content-type': 'application/json' },
       data:    {
         app: {
-          name:      this.name,
-          namespace: this.namespace
+          name:      this.meta.name,
+          namespace: this.meta.namespace
         },
         blobuid,
         builderimage: builderImage
@@ -157,7 +201,7 @@ export default class EpinioApplication extends EpinioResource {
   showAppLog() {
     this.$dispatch('wm/open', {
       id:        `epinio-${ this.id }-logs`,
-      label:     `${ this.name }`,
+      label:     `${ this.meta.name }`,
       product:   EPINIO_PRODUCT_NAME,
       icon:      'file',
       component: 'ApplicationLogs',
@@ -168,7 +212,7 @@ export default class EpinioApplication extends EpinioResource {
   showStagingLog(stageId) {
     this.$dispatch('wm/open', {
       id:        `epinio-${ this.id }-logs-${ stageId }`,
-      label:     `${ this.name } - Staging - ${ stageId }`,
+      label:     `${ this.meta.name } - Staging - ${ stageId }`,
       product:   EPINIO_PRODUCT_NAME,
       icon:      'file',
       component: 'StagingLogs',
@@ -180,7 +224,7 @@ export default class EpinioApplication extends EpinioResource {
     this.trace('Waiting for Application bits to be staged');
 
     const opt = {
-      url:     this.$getters['urlFor'](this.type, this.id, { url: `api/v1/namespaces/${ this.namespace }/staging/${ stageId }/complete` }),
+      url:     this.$getters['urlFor'](this.type, this.id, { url: `api/v1/namespaces/${ this.meta.namespace }/staging/${ stageId }/complete` }),
       method:         'get',
       headers: {
         'content-type': 'application/json',
@@ -200,8 +244,8 @@ export default class EpinioApplication extends EpinioResource {
       headers: { 'content-type': 'application/json' },
       data:    {
         app: {
-          name:      this.name,
-          namespace: this.namespace
+          name:      this.meta.name,
+          namespace: this.meta.namespace
         },
         stage: { id: stageId },
         image

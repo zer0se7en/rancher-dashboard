@@ -50,7 +50,7 @@ export function lookup(store, type) {
 
   for ( const t of tries ) {
     try {
-      out = find(cache, require(`@/products/${ store }/models/${ t }`), type);
+      out = find(cache, require(`@/products/${ store }/models/${ t }`), `${ store }/${ type }`);
       if ( out ) {
         return out;
       }
@@ -58,7 +58,7 @@ export function lookup(store, type) {
     }
 
     try {
-      out = find(cache, require(`@/models/${ store }/${ t }`), type);
+      out = find(cache, require(`@/models/${ store }/${ t }`), `${ store }/${ type }`);
       if ( out ) {
         return out;
       }

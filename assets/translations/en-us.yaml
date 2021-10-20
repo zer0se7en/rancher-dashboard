@@ -5969,12 +5969,10 @@ serverUpgrade:
 ##############################
 epinio:
   tableHeaders:
-    active: Active
     namespace: Namespace
-    owner: Owner
-    status: Status
     route: Route
     boundServices: Bound Services
+    deployedBy: Last Deployed By
   instances:
     api: URL
     explore: Explore

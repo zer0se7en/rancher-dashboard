@@ -7,11 +7,14 @@ import { handleSpoofedRequest } from '@/plugins/core-store/actions';
 import { base64Encode } from '@/utils/crypto';
 
 const createId = (schema, resource) => {
-  if (schema.attributes?.namespaced && resource.namespace) {
-    return `${ resource.namespace }/${ resource.name }`;
+  const name = resource.meta?.name || resource.name;
+  const namespace = resource.meta?.namespace || resource.namespace;
+
+  if (schema.attributes?.namespaced && namespace) {
+    return `${ namespace }/${ name }`;
   }
 
-  return resource.name;
+  return name;
 };
 
 export default {

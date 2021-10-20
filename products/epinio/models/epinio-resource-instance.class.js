@@ -18,7 +18,7 @@ export default class EpinioResource extends Resource {
       cluster:   this.$rootGetters['clusterId'],
       resource:  this.type,
       id,
-      namespace: this.namespace,
+      namespace: this.meta?.namespace,
     });
   }
 
