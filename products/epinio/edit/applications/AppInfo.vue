@@ -63,6 +63,10 @@ export default Vue.extend<Data, any, any, any>({
     'values.configuration.instances'() {
       this.update();
     },
+
+    'values.configuration.environment'() {
+      this.update();
+    },
   },
 
   computed: {
@@ -79,19 +83,6 @@ export default Vue.extend<Data, any, any, any>({
       });
     },
 
-    updateEnvVars(envvars: {[key: string] : string }) {
-      const env = Object.entries(envvars).reduce((res, [key, value]) => {
-        res.push({
-          name: key,
-          value
-        });
-
-        return res;
-      }, [] as { name: string, value: string }[]);
-
-      Vue.set(this.values.configuration, 'environment', env);
-      this.update();
-    }
   },
 
 });
@@ -124,14 +115,13 @@ export default Vue.extend<Data, any, any, any>({
     <div class="col span-8">
       <!-- TODO: RC show current env vars if editing -->
       <KeyValue
+        v-model="values.configuration.environment"
         :mode="mode"
-        :value="values.configuration.environment"
         :title="t('epinio.applications.create.envvar.title')"
         :key-label="t('epinio.applications.create.envvar.keyLabel')"
         :key-name="t('epinio.applications.create.envvar.keyName')"
         :value-label="t('epinio.applications.create.envvar.valueLabel')"
         :value-name="t('epinio.applications.create.envvar.valueName')"
-        @input="updateEnvVars"
       />
     </div>
   </div>
