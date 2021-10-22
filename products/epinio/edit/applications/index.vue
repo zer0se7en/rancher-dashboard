@@ -72,11 +72,16 @@ export default Vue.extend<Data, any, any, any>({
         label:          this.t('epinio.applications.steps.services.label'),
         subtext:        this.t('epinio.applications.steps.services.subtext'),
         ready:          true,
+        nextButton: {
+          labelKey: 'epinio.applications.steps.services.next',
+          style:    'btn role-primary bg-warning'
+        }
       }, {
         name:           'progress',
         label:          this.t('epinio.applications.steps.progress.label'),
         subtext:        this.t('epinio.applications.steps.progress.subtext'),
         ready:          false,
+        previousButton: { disable: true }
       }]
     };
   },
@@ -135,7 +140,9 @@ export default Vue.extend<Data, any, any, any>({
       :steps="steps"
       :banner-title="t('epinio.applications.create.title')"
       :banner-title-subtext="t('epinio.applications.create.titleSubText')"
+      header-mode="create"
       finish-mode="done"
+      :edit-first-step="true"
       @cancel="done"
       @finish="done"
     >
@@ -165,6 +172,7 @@ export default Vue.extend<Data, any, any, any>({
           :source="source"
           :mode="mode"
           :step="step"
+          @finished="done"
         ></AppProgress>
       </template>
     </Wizard>

@@ -1,14 +1,7 @@
 import { Resource } from '@/plugins/core-store/resource-class';
-import { APPLICATION_SOURCE_TYPE } from '@/products/epinio/edit/applications/app-types';
+import { APPLICATION_ACTION_STATE, APPLICATION_SOURCE_TYPE } from '@/products/epinio/edit/applications/app-types';
 import { epinioExceptionToErrorsArray } from '@/products/epinio/utils/errors';
 import Vue from 'vue';
-
-export const APPLICATION_ACTION_STATE = {
-  SUCCESS: 'success',
-  RUNNING: 'running',
-  FAIL:    'fail',
-  PENDING:  'pending',
-};
 
 export const APPLICATION_ACTION_TYPE = {
   CREATE: 'create',

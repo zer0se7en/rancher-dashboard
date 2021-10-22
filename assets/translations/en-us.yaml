@@ -6014,6 +6014,7 @@ epinio:
       services:
         label: Service
         subtext: Bind a service
+        next: Create
       progress:
         label: Progress
         subtext: Status of create
@@ -6027,7 +6028,7 @@ epinio:
     action:
       create:
         label: Create
-        description: The Application will be created ready to apply source to it
+        description: The Application will be created ready to deploy source to
       upload:
         label: Upload
         description: Upload the source for the Application

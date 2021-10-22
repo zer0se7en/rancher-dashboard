@@ -12,7 +12,7 @@ const STATES = {
 
 // These map to @/plugins/core-store/resource-class STATES
 const STATES_MAPPED = {
-  [STATES.CREATING]: 'creating',
+  [STATES.CREATING]: 'created',
   [STATES.STAGING]:  'provisioning',
   [STATES.RUNNING]:  'running',
   [STATES.ERROR]:    'error',
@@ -31,7 +31,7 @@ export default class EpinioApplication extends EpinioResource {
     case STATES.CREATING:
       return {
         error:         false,
-        transitioning: true,
+        transitioning: false,
         message:       this.statusmessage
       };
     case STATES.STAGING:

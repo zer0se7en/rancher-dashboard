@@ -6,11 +6,10 @@ import ApplicationAction, { APPLICATION_ACTION_TYPE } from '@/products/epinio/mo
 import SortableTable from '@/components/SortableTable/index.vue';
 import Checkbox from '@/components/form/Checkbox.vue';
 import BadgeState from '@/components/BadgeState.vue';
-import AsyncButton from '@/components/AsyncButton.vue';
-import { STATE, DESCRIPTION, SIMPLE_NAME } from '@/config/table-headers';
+import { STATE, DESCRIPTION } from '@/config/table-headers';
 import { EPINIO_TYPES } from '@/products/epinio/types';
 
-import { APPLICATION_SOURCE_TYPE } from './app-types';
+import { APPLICATION_ACTION_STATE, APPLICATION_SOURCE_TYPE } from './app-types';
 
 interface Data {
   running: boolean;
@@ -24,7 +23,6 @@ export default Vue.extend<Data, any, any, any>({
     SortableTable,
     BadgeState,
     Checkbox,
-    AsyncButton
   },
 
   props: {
@@ -58,7 +56,7 @@ export default Vue.extend<Data, any, any, any>({
       action:      APPLICATION_ACTION_TYPE.CREATE,
       application: this.application,
       type:        EPINIO_TYPES.APP_ACTION,
-      index:       0,
+      index:       0, // index used for sorting
     }));
     if (this.source.type === APPLICATION_SOURCE_TYPE.ARCHIVE) {
       this.actions.push(await this.$store.dispatch('epinio/create', {
@@ -81,6 +79,8 @@ export default Vue.extend<Data, any, any, any>({
       type:        EPINIO_TYPES.APP_ACTION,
       index:       3,
     }));
+
+    this.create();
   },
 
   data() {
@@ -88,32 +88,27 @@ export default Vue.extend<Data, any, any, any>({
       running:       false,
       actionHeaders: [
         {
-          ...SIMPLE_NAME,
-          sort:     undefined,
+          name:     'epinio-name',
           labelKey: 'epinio.applications.steps.progress.table.stage.label',
-          width:    200
+          value:    'name',
+          sort:     ['index'],
+          width:    100,
         },
         {
           ...DESCRIPTION,
-          sort:  undefined,
-          value: 'description',
-          width: 500
-        },
-        {
-          name:     'index',
-          labelKey: 'epinio.applications.steps.progress.table.run.label',
-          value:    'run',
-          sort:     ['index'],
-          width:     100,
+          sort:          undefined,
+          value:         'description',
+          width:         450,
         },
         {
           ...STATE,
           sort:     undefined,
           labelKey: 'epinio.applications.steps.progress.table.status',
-          width:     undefined, // Note - SortableTable will remove the width from NAME col if all columns have width
+          width:    150
         },
       ],
-      actions: []
+      actions: [],
+      APPLICATION_ACTION_STATE
     };
   },
 
@@ -144,7 +139,7 @@ export default Vue.extend<Data, any, any, any>({
       }
     },
 
-    async run(buttonDone: (res: boolean) => void) {
+    async create() {
       Vue.set(this, 'running', true);
 
       const enabledActions = [...this.actionsToRun];
@@ -153,7 +148,6 @@ export default Vue.extend<Data, any, any, any>({
         try {
           await action.execute({ source: this.source });
         } catch (err) {
-          buttonDone(false);
           Vue.set(this, 'running', false);
           console.error(err);// eslint-disable-line no-console
 
@@ -163,8 +157,8 @@ export default Vue.extend<Data, any, any, any>({
         }
       }
       await this.fetchApp();
-      buttonDone(true);
       Vue.set(this, 'running', false);
+      this.$emit('finished', true);
     }
   }
 });
@@ -179,7 +173,7 @@ export default Vue.extend<Data, any, any, any>({
         :headers="actionHeaders"
         :table-actions="false"
         :row-actions="false"
-        default-sort-by="index"
+        default-sort-by="epinio-name"
         :search="false"
         key-field="key"
       >
@@ -187,17 +181,14 @@ export default Vue.extend<Data, any, any, any>({
           <Checkbox v-model="row.run" :disabled="true" />
         </template>
         <template #cell:state="{row}">
-          <BadgeState :color="row.stateBackground" :label="row.stateDisplay" />
+          <i
+            v-if="row.state === APPLICATION_ACTION_STATE.RUNNING"
+            v-tooltip="row.stateDisplay"
+            class="icon icon-lg icon-spinner icon-spin"
+          />
+          <BadgeState v-else :color="row.stateBackground" :label="row.stateDisplay" />
         </template>
       </SortableTable>
-      <div class="run">
-        <AsyncButton
-          :mode="'run'"
-          class="mt-40"
-          :disabled="actionsToRun.length === 0"
-          @click="run"
-        />
-      </div>
     </div>
   </div>
 </template>
@@ -208,11 +199,6 @@ export default Vue.extend<Data, any, any, any>({
   justify-content: center;
   .progress {
     padding: 10px 0;
-
-    .run {
-      display: flex;
-      justify-content: flex-end;
-    }
   }
 }
 
