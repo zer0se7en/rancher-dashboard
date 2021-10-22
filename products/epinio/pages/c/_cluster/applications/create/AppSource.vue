@@ -7,7 +7,7 @@ import LabeledSelect from '@/components/form/LabeledSelect.vue';
 import FileSelector from '@/components/form/FileSelector.vue';
 import RadioGroup from '@/components/form/RadioGroup.vue';
 
-import { APPLICATION_SOURCE_TYPE } from './app-types';
+import { APPLICATION_SOURCE_TYPE } from '@/products/epinio/types';
 
 interface Data {
   errors: string[],

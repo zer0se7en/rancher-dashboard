@@ -26,7 +26,7 @@ export default Vue.extend<Data, any, any, any>({
 
 <template>
   <div>
-    DETAIL
+    EDIT
     Debug<br>
     Mode: {{ mode }}<br>
     Value: {{ JSON.stringify(value) }}<br>

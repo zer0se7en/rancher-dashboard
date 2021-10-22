@@ -22,6 +22,10 @@ const STATES_MAPPED = {
 export default class EpinioApplication extends EpinioResource {
   buildCache = {};
 
+  get listLocation() {
+    return this.$rootGetters['type-map/optionsFor'](this.type).customRoute || createEpinioRoute(`c-cluster-applications`, { cluster: this.$rootGetters['clusterId'] });
+  }
+
   get state() {
     return STATES_MAPPED[this.status] || STATES_MAPPED.unknown;
   }
@@ -115,7 +119,7 @@ export default class EpinioApplication extends EpinioResource {
   }
 
   get metadata() {
-    return this.meta;
+    return this.meta || {};
   }
 
   get namespaceLocation() {

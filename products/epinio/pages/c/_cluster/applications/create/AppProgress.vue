@@ -7,9 +7,7 @@ import SortableTable from '@/components/SortableTable/index.vue';
 import Checkbox from '@/components/form/Checkbox.vue';
 import BadgeState from '@/components/BadgeState.vue';
 import { STATE, DESCRIPTION } from '@/config/table-headers';
-import { EPINIO_TYPES } from '@/products/epinio/types';
-
-import { APPLICATION_ACTION_STATE, APPLICATION_SOURCE_TYPE } from './app-types';
+import { EPINIO_TYPES, APPLICATION_ACTION_STATE, APPLICATION_SOURCE_TYPE } from '@/products/epinio/types';
 
 interface Data {
   running: boolean;
@@ -32,7 +30,7 @@ export default Vue.extend<Data, any, any, any>({
     },
     source: {
       type: Object as PropType<{
-        type: APPLICATION_SOURCE_TYPE,
+        type: string, // APPLICATION_SOURCE_TYPE,
         // Docker
         url?: string
         // Archive

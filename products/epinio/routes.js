@@ -2,6 +2,14 @@ import { EXTENSION_PREFIX } from '../../utils/extensions';
 import { EPINIO_PRODUCT_NAME } from './types';
 
 export default resolve => [{
+  name:      `${ EXTENSION_PREFIX }-${ EPINIO_PRODUCT_NAME }-c-cluster-applications-create`,
+  path:      `/${ EXTENSION_PREFIX }/epinio/c/:cluster/applications/create`,
+  component: resolve(__dirname, 'pages/c/_cluster/applications/create/index.vue')
+}, {
+  name:      `${ EXTENSION_PREFIX }-${ EPINIO_PRODUCT_NAME }-c-cluster-applications`,
+  path:      `/${ EXTENSION_PREFIX }/epinio/c/:cluster/applications`,
+  component: resolve(__dirname, 'pages/c/_cluster/applications/index.vue')
+}, {
   name:      `${ EXTENSION_PREFIX }-${ EPINIO_PRODUCT_NAME }`,
   path:      `/${ EXTENSION_PREFIX }/epinio`,
   component: resolve(__dirname, 'pages/index.vue'),

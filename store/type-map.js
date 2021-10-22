@@ -977,7 +977,7 @@ export const getters = {
   // ------------------------------------
   hasCustomList(state, getters) {
     return (rawType) => {
-      const { type: key } = getters.componentFor(rawType);
+      const { type: key, plugin } = getters.componentFor(rawType);
       const cache = state.cache.list;
 
       if ( cache[key] !== undefined ) {
@@ -985,7 +985,12 @@ export const getters = {
       }
 
       try {
-        require.resolve(`@/list/${ key }`);
+        if ( plugin) {
+          require.resolve(`@/products/${ plugin }/list/${ key }`);
+        } else {
+          require.resolve(`@/list/${ key }`);
+        }
+
         cache[key] = true;
       } catch (e) {
         cache[key] = false;

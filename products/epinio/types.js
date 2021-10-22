@@ -8,3 +8,15 @@ export const EPINIO_TYPES = {
   INSTANCE:   'instance',
   APP_ACTION: 'application-action'
 };
+
+export const APPLICATION_SOURCE_TYPE = {
+  CONTAINER_URL: 'container_url',
+  ARCHIVE:       'archive'
+};
+
+export const APPLICATION_ACTION_STATE = {
+  SUCCESS: 'success',
+  RUNNING: 'running',
+  FAIL:    'fail',
+  PENDING:  'pending',
+};

@@ -47,8 +47,8 @@ export default Vue.extend<Data, any, any, any>({
       errors:        [],
       values: {
         meta: {
-          name:      this.application.meta.name,
-          namespace: this.application.meta.namespace
+          name:      this.application.meta?.name,
+          namespace: this.application.meta?.namespace
         },
         configuration: {
           instances:   this.application.configuration?.instances || 1,

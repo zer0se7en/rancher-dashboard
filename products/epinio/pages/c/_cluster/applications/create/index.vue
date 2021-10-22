@@ -1,18 +1,23 @@
 <script lang="ts">
-import Vue, { PropType } from 'vue';
+import Vue from 'vue';
 import Application from '@/products/epinio/models/applications.class';
 import CreateEditView from '@/mixins/create-edit-view/impl';
 import Loading from '@/components/Loading.vue';
 import Wizard from '@/components/Wizard.vue';
 import { EPINIO_TYPES } from '@/products/epinio/types';
-import { _CREATE, _VIEW } from '@/config/query-params';
+import { _CREATE } from '@/config/query-params';
 import AppInfo from './AppInfo.vue';
 import AppSource from './AppSource.vue';
 import AppService from './AppService.vue';
 import AppProgress from './AppProgress.vue';
 
 interface Data {
+  value?: Application,
+  originalValue?: Application,
+  mode: string,
   errors: string[],
+  source: any,
+  steps: any[],
 }
 
 // Data, Methods, Computed, Props
@@ -27,33 +32,25 @@ export default Vue.extend<Data, any, any, any>({
     AppProgress,
   },
 
-  props: {
-    value: {
-      type:     Object as PropType<Application>,
-      required: true
-    },
-    originalValue: {
-      type:     Object as PropType<Application>,
-      required: true
-    },
-    mode: {
-      type:     String,
-      required: true
-    },
-  },
-
   mixins:     [
     CreateEditView,
   ],
 
   async fetch() {
     await this.$store.dispatch('epinio/findAll', { type: EPINIO_TYPES.NAMESPACE });
+
+    this.originalModel = await this.$store.dispatch(`epinio/create`, { type: EPINIO_TYPES.APP });
+    // Dissassociate the original model & model. This fixes `Create` after refreshing page with SSR on
+    this.value = await this.$store.dispatch(`epinio/clone`, { resource: this.originalModel });
   },
 
   data() {
     return {
-      errors:  [],
-      source: {
+      value:         undefined,
+      originalValue: undefined,
+      mode:          _CREATE,
+      errors:        [],
+      source:        {
         tarball:      null,
         builderImage: null
       },
@@ -87,21 +84,6 @@ export default Vue.extend<Data, any, any, any>({
   },
 
   computed: {
-    valid() {
-      return false; // TODO: RC
-    },
-    action() {
-      return this.isCreate ? 'create' : 'update';
-    },
-
-    realMode() {
-      if ( this.$route.params?.id ) {
-        return this.$route.query.mode || _VIEW;
-      } else {
-        return _CREATE;
-      }
-    },
-
     jsonValue() {
       return JSON.stringify(this.value);
     }
