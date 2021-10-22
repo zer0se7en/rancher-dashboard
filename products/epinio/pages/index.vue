@@ -64,7 +64,7 @@ export default Vue.extend<Data, any, any, any>({
         :table-actions="false"
       >
         <template #cell:pick="{row}">
-          <n-link class="btn btn-sm role-primary" :to="{name: 'ext-epinio-c-cluster', params: {cluster: row.id}}">
+          <n-link class="btn btn-sm role-primary" :to="{name: 'ext-epinio-c-cluster-resource', params: {cluster: row.id, resource: 'applications'}}">
             {{ t('landing.clusters.explore') }}
           </n-link>
         </template>

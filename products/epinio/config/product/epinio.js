@@ -13,19 +13,9 @@ export function init(store) {
     headers,
     configureType,
     componentForType,
-    virtualType,
     spoofedType,
     weightType
   } = DSL(store, EPINIO_PRODUCT_NAME);
-
-  virtualType({
-    label:       store.getters['i18n/t']('clusterIndexPage.header'),
-    namespaced:  false,
-    name:        'cluster-dashboard',
-    weight:      1000,
-    route:       createEpinioRoute('c-cluster'),
-    exact:       true,
-  });
 
   spoofedType({
     label:             store.getters['type-map/labelFor']({ id: EPINIO_TYPES.INSTANCE }, 2),
@@ -98,7 +88,6 @@ export function init(store) {
   });
 
   basicType([
-    'cluster-dashboard',
     EPINIO_TYPES.APP,
     EPINIO_TYPES.NAMESPACE,
   ]);
