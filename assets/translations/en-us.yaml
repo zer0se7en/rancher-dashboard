@@ -100,6 +100,7 @@ nav:
     storage: Storage
     workload: Workload
     monitoring: Monitoring
+    advanced: Advanced
   ns:
     all: All Namespaces
     clusterLevel: Only Cluster Resources
@@ -520,6 +521,11 @@ asyncButton:
     action: Install
     success: Installing
     waiting: Starting&hellip;
+  pause:
+    action: Pause Orchestration
+    success: Paused Orchestration
+    waiting: Pausing Orchestration
+    description: New revisions will not be deployed because orchestration is temporarily paused. To deploy new revisions, resume orchestration.
   refresh:
     action: ''
     actionIcon: refresh
@@ -537,6 +543,10 @@ asyncButton:
     action: Restore
     waiting: Restoring&hellip;
     success: Restored
+  resume:
+    action: Resume Orchestration
+    success: Resumed Orchestration
+    waiting: Resuming Orchestration
   rollback:
     action: Roll Back
     success: Rolled Back
@@ -547,7 +557,7 @@ asyncButton:
     success: Rotated
   snapshot:
     action: Snapshot Now
-    waiting: Snapshotting&hellip;
+    waiting: Snapshot Initiated&hellip;
     success: Snapshot Creating
   uninstall:
     action: Uninstall
@@ -644,7 +654,9 @@ catalog:
     section:
       notes: Release Notes
       readme: Chart README
-      resources: Resources
+      resources: 
+        label: Resources
+        busy: The related resources will appear when {app} is fully installed.
       values: Values YAML
   chart:
     header:
@@ -1111,6 +1123,9 @@ cluster:
         add: Add Port
         help: When using an existing NSG, Open Ports are ignored.
         label: Open Port
+      plan:
+        label: Purchase Plan
+        placeholder: publisher:product:plan
       privateIp:
         label: Private IP Address
       publicIpOptions:
@@ -1662,6 +1677,8 @@ fleet:
       warning: 'Warning'
       error: 'Error'
       unknown: 'Unknown'
+      notReady: Not Ready
+      waitApplied: Wait Applied
   gitRepo:
     tabs:
       resources: Resources
@@ -1943,9 +1960,8 @@ istio:
   cni: Enabled CNI
   customOverlayFile:
     label: Custom Overlay File
-    tip: 'The <a target="_blank" rel="noopener noreferrer nofollow" href="https://istio.io/latest/docs/setup/install/istioctl/#customizing-the-configuration">overlay file</a> allows for additional configuration on top of the base {vendor} Istio installation. You can utilize the <a href="https://istio.io/latest/docs/reference/config/istio.operator.v1alpha1/" target="_blank" rel="noopener noreferrer nofollow" >IstioOperator API</a> to make changes and additions for all components and apply those changes via this overlay YAML file.'
-  description: '{vendor} Istio helm chart installs a minimal Istio configuration for you to get started integrating with your applications.
-  If you would like to get additional information about Istio, visit <a target="_blank" href="https://istio.io/latest/docs/concepts/what-is-istio" rel="noopener noreferrer nofollow">https://istio.io/latest/docs/concepts/what-is-istio/</a>'
+    tip: 'The <a target="_blank" rel="noopener noreferrer nofollow" href="https://istio.io/latest/docs/setup/additional-setup/customize-installation/#patching-the-output-manifest">overlay file</a> allows for additional configuration on top of the base {vendor} Istio installation. You can utilize the <a href="https://istio.io/latest/docs/reference/config/istio.operator.v1alpha1/" target="_blank" rel="noopener noreferrer nofollow" >IstioOperator API</a> to make changes and additions for all components and apply those changes via this overlay YAML file.'
+  description: '{vendor} Istio helm chart installs a minimal Istio configuration for you to get started integrating with your applications. If you would like to get additional information about Istio, visit <a target="_blank" href="https://istio.io/latest/docs/concepts/what-is-istio" rel="noopener noreferrer nofollow">https://istio.io/latest/docs/concepts/what-is-istio/</a>'
   destinationRule:
     title:
       new: Add Destination Rule
@@ -2174,6 +2190,10 @@ logging:
     k3sContainerEngine: K3S Container Engine
     enableAdditionalLoggingSources: Enable enhanced cloud provider logging
     dockerRootDirectory: Docker Root Directory
+    systemdLogPath: systemd Log Path
+    tooltip: 'Some kubernetes distributions log to <code>journald</code>. In order to collect these logs the <code>systemdLogPath</code> needs to be defined. While the <code>/run/log/journal</code> directory is used by default, some Linux distributions do not default to this path.'
+    url: '<a href="https://rancher.com/docs/rancher/v2.6/en/logging/helm-chart-options/" target="_blank" rel="noopener nofollow noreferrer">Learn more</a>'
+    default: /run/log/journal
   elasticsearch:
     host: Host
     scheme: Scheme
@@ -2190,6 +2210,17 @@ logging:
       label: Client Key from Secret
       placeholder: Paste in the client key
     clientKeyPass: Client Key Pass from Secret
+  gelf:
+    host: Host
+    port: Port
+    protocol: Protocol
+    tls: Enable TLS
+    tlsOptions:
+      clientCert: Client Cert
+      clientKey: Client Cert Key
+      allCiphers: Allow any ciphers to be used
+      tlsVersion: TLS version
+      noVerify: Skip TLS verification
   kafka:
     brokers: Brokers
     defaultTopic: Default Topic
@@ -2297,6 +2328,8 @@ logging:
     path: Path
     overwriteExistingPath: Overwrite Existing Path
   output:
+    buffer:
+      label: Output Buffer
     selectOutputs: Select Outputs
     selectBanner: Select to configure an output
     sections:
@@ -2310,6 +2343,7 @@ logging:
     splunkHec: Splunk
     kafka: Kafka
     forward: Fluentd
+    gelf: GELF
     loki: Loki
     awsElasticsearch: Amazon Elasticsearch
     azurestorage: Azure Storage
@@ -2693,6 +2727,10 @@ namespace:
       warning: 'Warning'
       error: 'Error'
       unknown: 'Unknown'
+      paused:
+        stateName: 'Inactive'
+        shortDescription: Deployment is paused
+        longDescription: Deployment is paused. Pausing stops the controller from deploying revisions.
 
 
 namespaceFilter:
@@ -3159,6 +3197,7 @@ project:
   members:
     label: Members
   containerDefaultResourceLimit: Container Default Resource Limit
+  vmDefaultResourceLimit: VM Default Resource Limit
   resourceQuotas: Resource Quotas
   haveOneOwner: There must be at least one member with the Owner role.
   psp:
@@ -3695,6 +3734,10 @@ servicesPage:
       label: Cluster IP
       placeholder: e.g. 10.43.xxx.xxx
     label: IP Addresses
+    loadBalancerIp:
+      label: Load Balancer IP
+      placeholder: e.g. 192.0.xxx.xxx
+      helpText: If you specify a loadBalancerIP but your cloud provider does not support the feature, the loadBalancerIP field that you set is ignored.
   pods:
     label: Pods
   ports:
@@ -4209,6 +4252,7 @@ tableHeaders:
   storage: Storage Size
   defaultVersion: Default version
   ipAddress: IP Address
+  diskState: Disk State
 
 target:
   router:
@@ -4489,7 +4533,7 @@ workload:
         add: Add command to execute
         command:
           label: Command
-          placeholder: e.g. sh -c sleep 10
+          placeholder: "e.g. sh -c 'sleep 10'"
       httpGet:
         title: HttpGet
         add: Create HTTP request
@@ -4917,6 +4961,8 @@ harvester:
     hotplug:
       success: 'Volume { diskName } is mounted to the VM { vm }.'
       title: Add Volume
+    hotunplug:
+      success: 'Volume { name } is detach successfully.'
   notification:
     title:
       succeed: Succeed
@@ -4929,7 +4975,7 @@ harvester:
     restart: Restart
     stop: Stop
     pause: Pause
-    unpause: unpasue
+    unpause: Unpause
     ejectCDROM: Eject CDROM
     launchFormTemplate: Launch instance from template
     modifyTemplate: Modify template (Create new version)
@@ -4989,6 +5035,14 @@ harvester:
     cpu: Cpu
     memory: Memory
     virtaulName: Virtual machine name
+    promiscuous: Promiscuous
+    ipv4Address: IPv4 Address
+  generic:
+    showMore: Show More
+    hideMore: Hide More
+    memory: Memory
+    cpu: CPU
+    storage: Storage
   
   validation:
     custom:
@@ -5023,7 +5077,7 @@ harvester:
     hardwareResourceGauge:
       cpu: CPU
       memory: Memory
-      storage: Storage Size
+      storage: Storage
     sections:
       events:
         label: Events
@@ -5071,7 +5125,7 @@ harvester:
       kernel: Kernel
       management: Management Node
       compute: Compute Node
-      storage: Storage Size
+      storage: Storage
       nic: Physical NIC
       notRecommended: 'Not recommended'
       networkType: Type
@@ -5101,12 +5155,14 @@ harvester:
         info: The disk has already been force-formatted
       notification:
         success: 'Update host "{name}" configurations successfully.'
+      error: Host has unready or unschedulable disks.
 
   virtualizationManagement:
     manage: Manage
 
   virtualMachine:
     label: Virtual Machines
+    osType: OS Type
     instance:
       singleInstance: 
       multipleInstance: 
@@ -5137,10 +5193,15 @@ harvester:
     promptRemove:
       title: 'Select the volume you want to delete:'
       deleteAll: Delete All
+    unplug:
+      title: 'Are you sure that you want to detach volume {name} ?'
+      actionLabel: Detach
+      detachVolume:
+        Detach Volume
     restartTip: Restart the virtual machine now to take effect of the configuration changes.
     createRunning: Start virtual machine on creation
     restartNow: Restart Now
-    createSSHKey: Create SSH Key
+    createSSHKey: Create a New...
     installAgent: Install guest agent
     enableUsb: Enable USB Tablet
     sshTitle: Add Public SSH Key
@@ -5177,14 +5238,16 @@ harvester:
       addPort:  Add Port
     cloudConfig:
       title: Cloud Config
+      createTemplateTitle: 'Create {name}.'
+      createNew: Create new...
       cloudInit:
         label: Cloud Init
-        placeholder: Choose a template
-      userData:
+        placeholder: Select a template
+      user:
         label: User Data Template
         title: "User Data:"
         tip: "You can specify user data to configure an instance or run a configuration script during launch. If you launch more than one instance at a time, the user data is available to all the instances in that reservation. <a href='https://cloudinit.readthedocs.io/en/latest/topics/examples.html' target='_blank'>Learn more</a>"
-      networkData:
+      network:
         label: Network Data Template
         title: "Network Data:"
         tip: "The network-data configuration allows you to customize the instance’s networking interfaces by assigning subnet configuration, virtual device creation (bonds, bridges, vlans) routes and DNS configuration. <a href='https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v1.html' target='_blank'>Learn more</a>"
@@ -5288,6 +5351,12 @@ harvester:
     sourceType:
       download: URL
       upload: File
+    warning:
+      uploading: |-
+        {count, plural,
+        =1 {1 image is uploading, please do not refresh or close the page.}
+        other {{count} images are uploading, please do not refresh or close the page.}
+        }
 
   vmTemplate:
     label: Templates
@@ -5355,7 +5424,8 @@ harvester:
       secretAccessKey: specify your secret access key
       cert: upload a self-signed SSL certificate
     vlanChangeTip: The newly modified default physical NIC only applies to newly added nodes, not existing ones
-    defaultPhysicalNIC: Default Physical NIC
+    defaultPhysicalNIC: Default Network Interface
+    percentTip: The value in parentheses represents the distribution percentage of the network interface on all hosts. If an interface less than 100% is selected, the user needs to manually specify the network interface on the host where the vlan network configuration fails.
 
   cloudTemplate:
     label: Cloud Config Templates
@@ -5370,9 +5440,18 @@ harvester:
       learnMore: Learn more about Harvester from the <a target="_blank" href="https://harvesterhci.io/" rel="noopener noreferrer nofollow">Harvester Web Site</a> or read the the <a target="_blank" href="https://docs.harvesterhci.io/" rel="noopener noreferrer nofollow">Harvester Docs</a>
       description: Harvester is a modern Hyperconverged infrastructure (HCI) solution built for bare metal servers using enterprise-grade open source technologies including Kubernetes, Kubevirt and Longhorn.
 
-  
   support:
     title: Harvester Support
+    kubeconfig:
+      title: Download KubeConfig
+      titleDescription: Download kubeconfig for debugging or importing as an external cluster to Rancher. 
+  
+  namespace:
+    label: Namespaces
+
+  projectNamespace:
+    label: Projects/Namespaces
+  
 ##############################
 # Model Properties
 ##############################
@@ -5832,7 +5911,7 @@ advancedSettings:
     'ui-banners': 'Classification banner is used to display a custom fixed banner in the header, footer, or both.'
     'ui-default-landing': 'The default page users land on after login.'
     'brand': Folder name for an alternative theme defined in '/assets/brand'
-    'harv-vlan': Default physical NIC name of the VLAN network.
+    'harv-vlan': Default Network Interface name of the VLAN network.
     'harv-backup-target': Custom back target to store VM backups.
     'harv-log-level': Configure Harvester server log level. Default to info.
     'harv-server-version': Harvester server version.
@@ -5916,6 +5995,8 @@ branding:
       bannerBold: Bold
       bannerItalic: Italic
       bannerUnderline: Underline
+    bannerFontSize:
+      label: 'Font Size'
   color:
     label: Primary Color
     tip: You can override the primary color used throughout the UI with a custom color of your choice.

@@ -421,6 +421,25 @@ export default {
       return out;
     },
 
+    /**
+     * Format values to render in the sorted table
+     * In the absence of predefined formatter table would use this
+     *
+     * @param {Object} row
+     * @param {Object} col
+     *
+     * @return {String}
+     */
+    formatValue(row, col) {
+      const valFor = this.valueFor(row, col);
+
+      if ( Array.isArray(valFor) ) {
+        return valFor.join(', ');
+      }
+
+      return valFor;
+    },
+
     isExpanded(row) {
       const key = row[this.keyField];
 
@@ -669,7 +688,7 @@ export default {
                           v-bind="col.formatterOpts"
                         />
                         <template v-else-if="valueFor(row,col) !== ''">
-                          {{ valueFor(row,col) }}
+                          {{ formatValue(row,col) }}
                         </template>
                         <template v-else-if="col.dashIfEmpty">
                           <span class="text-muted">&mdash;</span>

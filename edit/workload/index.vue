@@ -34,7 +34,7 @@ import Labels from '@/components/form/Labels';
 import RadioGroup from '@/components/form/RadioGroup';
 import { UI_MANAGED } from '@/config/labels-annotations';
 import { removeObject } from '@/utils/array';
-import { BEFORE_SAVE_HOOKS } from '~/mixins/child-hook';
+import { BEFORE_SAVE_HOOKS } from '@/mixins/child-hook';
 
 const TAB_WEIGHT_MAP = {
   general:              99,
@@ -816,7 +816,7 @@ export default {
             <div class="row mb-20">
               <div class="col span-6">
                 <LabeledInput
-                  v-model="container.image"
+                  v-model.trim="container.image"
                   :mode="mode"
                   :label="t('workload.container.image')"
                   placeholder="e.g. nginx:latest"
