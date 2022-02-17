@@ -4,7 +4,7 @@ import Loading from '@/components/Loading';
 import Banner from '@/components/Banner';
 import SelectIconGrid from '@/components/SelectIconGrid';
 import {
-  REPO_TYPE, REPO, CHART, VERSION, SEARCH_QUERY, _FLAGGED, CATEGORY, DEPRECATED, HIDDEN
+  REPO_TYPE, REPO, CHART, VERSION, SEARCH_QUERY, _FLAGGED, CATEGORY, DEPRECATED, HIDDEN, OPERATING_SYSTEM
 } from '@/config/query-params';
 import { lcFirst } from '@/utils/string';
 import { sortBy } from '@/utils/sort';
@@ -35,6 +35,7 @@ export default {
     this.showDeprecated = query[DEPRECATED] === _FLAGGED;
     this.showHidden = query[HIDDEN] === _FLAGGED;
     this.category = query[CATEGORY] || '';
+    this.operatingSystem = query[OPERATING_SYSTEM] || this.defaultOperatingSystem;
     this.allRepos = this.areAllEnabled();
   },
 
@@ -42,6 +43,7 @@ export default {
     return {
       allRepos:            null,
       category:            null,
+      operatingSystem:     null,
       searchQuery:         null,
       showDeprecated:      null,
       showHidden:          null,
@@ -151,7 +153,7 @@ export default {
       const enabledCharts = (this.enabledCharts || []);
 
       return filterAndArrangeCharts(enabledCharts, {
-        isWindows:      this.currentCluster.providerOs === 'windows',
+        os:             this.operatingSystem,
         category:       this.category,
         searchQuery:    this.searchQuery,
         showDeprecated: this.showDeprecated,
@@ -192,6 +194,67 @@ export default {
       return out;
     },
 
+    operatingSystemChartCounts() {
+      const counts = { linux: 0, windows: 0 };
+      const showPrerelease = this.$store.getters['prefs/get'](SHOW_PRE_RELEASE);
+
+      this.enabledCharts.forEach((chart) => {
+        const windowsVersions = compatibleVersionsFor(chart.versions, 'windows', showPrerelease);
+        const linuxVersions = compatibleVersionsFor(chart.versions, 'linux', showPrerelease);
+
+        if (windowsVersions.length > 0) {
+          counts['windows'] += 1;
+        }
+
+        if (linuxVersions.length > 0) {
+          counts['linux'] += 1;
+        }
+      });
+
+      return counts;
+    },
+
+    operatingSystemOptions() {
+      return [
+        {
+          label: this.t('catalog.charts.operatingSystems.all'),
+          value: '',
+          count: this.enabledCharts.length
+        },
+        {
+          label: this.t('catalog.charts.operatingSystems.linux'),
+          value: 'linux',
+          count: this.operatingSystemChartCounts.linux
+        },
+        {
+          label: this.t('catalog.charts.operatingSystems.windows'),
+          value: 'windows',
+          count: this.operatingSystemChartCounts.windows
+        }
+      ];
+    },
+
+    defaultOperatingSystem() {
+      const linuxCount = this.currentCluster.status.linuxWorkerCount;
+      const windowsCount = this.currentCluster.status.windowsWorkerCount;
+
+      if (linuxCount > windowsCount) {
+        return 'linux';
+      }
+
+      if (windowsCount > linuxCount) {
+        return 'windows';
+      }
+
+      return '';
+    },
+
+    showOperatingSystemOptions() {
+      const linuxCount = this.currentCluster.status.linuxWorkerCount;
+      const windowsCount = this.currentCluster.status.windowsWorkerCount;
+
+      return linuxCount > 0 && windowsCount > 0;
+    }
   },
 
   watch: {
@@ -201,6 +264,10 @@ export default {
 
     category(cat) {
       this.$router.applyQuery({ [CATEGORY]: cat || undefined });
+    },
+
+    operatingSystem(os) {
+      this.$router.applyQuery({ [OPERATING_SYSTEM]: os || undefined });
     },
   },
 
@@ -328,7 +395,7 @@ export default {
       </div>
     </header>
 
-    <div class="left-right-split">
+    <div class="left-right-split" :class="{'with-os-options': showOperatingSystemOptions}">
       <Select
         :searchable="false"
         :options="repoOptionsForDropdown"
@@ -370,10 +437,34 @@ export default {
         </template>
       </Select>
 
-      <input ref="searchQuery" v-model="searchQuery" type="search" class="input-sm" :placeholder="t('catalog.charts.search')">
+      <Select
+        v-if="showOperatingSystemOptions"
+        v-model="operatingSystem"
+        :clearable="false"
+        :searchable="false"
+        :options="operatingSystemOptions"
+        placement="bottom"
+        label="label"
+        style="min-width: 200px;"
+        :reduce="opt => opt.value"
+      >
+        <template #option="opt">
+          {{ opt.label }} ({{ opt.count }})
+        </template>
+      </Select>
 
-      <button v-shortkey.once="['/']" class="hide" @shortkey="focusSearch()" />
-      <AsyncButton mode="refresh" size="sm" @click="refresh" />
+      <div class="filter-block">
+        <input
+          ref="searchQuery"
+          v-model="searchQuery"
+          type="search"
+          class="input-sm"
+          :placeholder="t('catalog.charts.search')"
+        >
+
+        <button v-shortkey.once="['/']" class="hide" @shortkey="focusSearch()" />
+        <AsyncButton class="refresh-btn" mode="refresh" size="sm" @click="refresh" />
+      </div>
     </div>
 
     <Banner v-for="err in loadingErrors" :key="err" color="error" :label="err" />
@@ -406,9 +497,41 @@ export default {
     z-index: z-index('fixedTableHeader');
     background: transparent;
     display: grid;
-    grid-template-columns: 50% auto auto 40px;
+    grid-template-columns: 40% auto auto;
     align-content: center;
     grid-column-gap: 10px;
+
+    .filter-block {
+      display: flex;
+    }
+    .refresh-btn {
+      margin-left: 10px;
+    }
+
+    &.with-os-options {
+      grid-template-columns: 40% auto auto auto;
+    }
+
+    @media only screen and (max-width: map-get($breakpoints, '--viewport-12')) {
+      &{
+        grid-template-columns: auto auto !important;
+        grid-template-rows: 40px 40px;
+        grid-row-gap: 20px;
+      }
+    }
+
+    @media only screen and (max-width: map-get($breakpoints, '--viewport-7')) {
+      &{
+        &{
+          grid-template-columns: auto !important;
+          grid-template-rows: 40px 40px 40px !important;
+
+          &.with-os-options {
+            grid-template-rows: 40px 40px 40px 40px !important;
+          }
+        }
+      }
+    }
   }
 
 .checkbox-select {

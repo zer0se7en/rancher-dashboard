@@ -1,5 +1,5 @@
 // --------------------------------------
-// 1. Provided by Steve and always potentialy available
+// 1. Provided by Steve and always potentially available
 // --------------------------------------
 
 // Steve-specific virtual types
@@ -144,6 +144,7 @@ export const MANAGEMENT = {
   FEATURE:                       'management.cattle.io.feature',
   // GROUP:                         'management.cattle.io.group',
   KONTANIER_DRIVER:              'management.cattle.io.kontainerdriver',
+  MULTI_CLUSTER_APP:             'management.cattle.io.multiclusterapp',
   NODE:                          'management.cattle.io.node',
   NODE_DRIVER:                   'management.cattle.io.nodedriver',
   NODE_POOL:                     'management.cattle.io.nodepool',

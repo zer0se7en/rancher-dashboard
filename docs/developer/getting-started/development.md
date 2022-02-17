@@ -212,6 +212,8 @@ The Create/Edit Yaml experience is controlled by `/components/ResourceYaml.vue`.
 
 Special attention should be made of the `mode` and `as` params that's available via the `CreateEditView` mixin (as well as other helpful functionality). Changing these should change the behaviour of the resource details page (depending on the availability of resource type custom components).
 
+For more information about CreateEditView and how to add new create/edit forms, see [Create/Edit Forms.](../create-edit-forms)
+
 | `mode` | `as` | Content |
 |------------|----------|-------|
 | falsy | falsy | Shows the View YAML or Customised Detail component|
@@ -437,11 +439,14 @@ The forms for creating and editing resources are in the `edit` directory. Common
 
 If a form element was repeated for every row in a table, it would make the UI slower. To increase performance, components such as `ActionMenu` and `PromptModal` are not repeated for every row in a table, and they don't directly interact with the data from a table row. Instead, they communicate with each row indirectly through the store. All the information about the actions that should be available for a certain resource is contained in a model, and the `ActionMenu` or `PromptModal` components take that information about the selected resource from the store. Modals and menus are opened by telling the store that they should be opened. For example, this call to the store  `this.$store.commit('action-menu/togglePromptModal');` is used to open the action menu. Then each component uses the `dispatch` method to get all the information it needs from the store.
 
-## Testing
-### E2E Tests
-This repo is configured for end-to-end testing with [Cypress](https://docs.cypress.io/api/table-of-contents). 
-#### Initial Setup
-For the cypress test runner to consume the UI, you must specify two environment variables, `TEST_USERNAME` and `TEST_PASSWORD`. By default the test runner will attempt to visit a locally running dashboard at `https://localhost:8005`. This may be overwritten with the `DEV_UI` environment variable. Run `yarn e2e:dev` to start the dashboard in SSR mode and open the cypress test runner. Run tests through the cypress GUI once the UI is built. Cypress tests will automatically re-run if they are altered (hot reloading). Alternatively the dashboard ui and cypress may be run separately with `yarn dev` and `yarn cypress open`. 
+### Customize Deletion Warnings
+To warn users about deleting a certain resource, you can customize the message that is shown to the user when they attempt to delete a resource.
+You can add the error message to the resource class model in this format:
+```
+get warnDeletionMessage() {
+  return this.t('path.to.delete.warning');
+}
+```
 
 ## Other UI Features
 ### Icons 
@@ -480,3 +485,51 @@ Shortcuts are implemented via [`vue-shortkey`](https://github.com/iFgR/vue-short
 ```
 
 Configuration for this is in `plugins/shortkey.js`. At the time of writing this contains options to disable keyboard shortcuts in `input`, `textarea` and `select` elements.
+
+## Package Management
+
+NPM Package dependencies can be found in the usual `./package.json` file. There is also `./yarn.lock` which fixes referenced dependency's versions.
+
+Changes to these files should be kept to a minimum to avoid regression for seldom used features (caused by newer dependencies changing and breaking them).
+
+Changes to `./yarn.lock` should be reviewed carefully, specifically to ensure no rogue dependency url is introduced.
+
+
+## Testing
+
+### E2E Tests
+This repo is configured for end-to-end testing with [Cypress](https://docs.cypress.io/api/table-of-contents). 
+
+#### Initial Setup
+For the cypress test runner to consume the UI, you must specify two environment variables, `TEST_USERNAME` and `TEST_PASSWORD`. By default the test runner will attempt to visit a locally running dashboard at `https://localhost:8005`. This may be overwritten with the `DEV_UI` environment variable. Run `yarn e2e:dev` to start the dashboard in SSR mode and open the cypress test runner. Run tests through the cypress GUI once the UI is built. Cypress tests will automatically re-run if they are altered (hot reloading). Alternatively the dashboard ui and cypress may be run separately with `yarn dev` and `yarn cypress open`. 
+
+#### Writing tests
+
+Test specs should be grouped logically, normally by page or area of the Dashboard but also by a specific feature or component.
+
+Tests should make use of common Page Object (PO) components. These can be pages or individual components which expose a useful set of tools, but most importantly contain the selectors for the DOM elements that need to be used. These will ensure changes to the underlying components don't require a rewrite of many many tests. They also allow parent components to easily search for children (for example easily finding all anchors in a section instead of the whole page). Given that tests are typescript it should be easy to explore the functionality.
+
+Some examples of PO functionality
+```
+HomePage.gotTo()
+new HomePagePo().checkIsCurrentPage()
+new BurgerMenuPo().clusters()
+new AsyncButtonPO('.my-button').isDisabled()
+new LoginPagePo().username().set('admin')
+```
+
+POs all inherit a root `component.po`. Common component functionality can be added there. They also expose their core cypress (chainable) element.
+
+There are a large number of pages and components in the Dashboard and only a small set of POs. These will be expanded as the tests grow.
+
+#### Tips
+The Cypress UI is very much your friend. There you can click pick tests to run, easily visually track the progress of the test, see the before/after state of each cypress command (specifically good for debugging failed steps), see https requests, etc.
+
+Tests can also be restricted before cypress runs, or at run time, by prepending `.only` to the run.
+```
+describe.only('Burger Side Nav Menu', () => {
+  beforeEach
+```
+```
+it.only('Opens and closes on menu icon click', () => {
+```

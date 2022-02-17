@@ -53,7 +53,7 @@ export default {
   data() {
     const newCloudCred = this.$route.query[CLOUD_CREDENTIAL] === _FLAGGED;
     const editCloudCred = this.mode === _EDIT && this.value._type === TYPES.CLOUD_CREDENTIAL;
-    const cloneCloudCred = this.realMode === _CLONE && this.originalValue._type === TYPES.CLOUD_CREDENTIAL;
+    const cloneCloudCred = this.realMode === _CLONE && this.liveValue._type === TYPES.CLOUD_CREDENTIAL;
     const isCloud = newCloudCred || editCloudCred || cloneCloudCred;
 
     if ( newCloudCred ) {
@@ -288,7 +288,7 @@ export default {
         :hide-sensitive-data="hideSensitiveData"
       />
       <Tabbed v-else :side-tabs="true" default-tab="data">
-        <Tab name="data" :label="dataLabel">
+        <Tab name="data" :label="dataLabel" :weight="99">
           <component
             :is="dataComponent"
             :value="value"
@@ -296,7 +296,7 @@ export default {
             :hide-sensitive-data="hideSensitiveData"
           />
         </Tab>
-        <Tab name="labels" label-key="generic.labelsAndAnnotations">
+        <Tab name="labels" label-key="generic.labelsAndAnnotations" :weight="-1">
           <Labels v-model="value" :mode="mode" />
         </Tab>
       </Tabbed>

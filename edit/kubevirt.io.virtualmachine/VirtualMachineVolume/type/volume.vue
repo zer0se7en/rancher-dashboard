@@ -7,6 +7,7 @@ import LabeledInput from '@/components/form/LabeledInput';
 import LabeledSelect from '@/components/form/LabeledSelect';
 
 import { PVC } from '@/config/types';
+import { formatSi, parseSi } from '@/utils/units';
 
 export default {
   name:       'HarvesterEditVolume',
@@ -49,6 +50,11 @@ export default {
     validateRequired: {
       type:     Boolean,
       required: true
+    },
+
+    isVirtualType: {
+      type:    Boolean,
+      default: true
     }
   },
 
@@ -67,7 +73,7 @@ export default {
     },
 
     isDisabled() {
-      return !this.value.newCreateId && this.isEdit;
+      return !this.value.newCreateId && this.isEdit && this.isVirtualType;
     },
   },
 
@@ -82,7 +88,16 @@ export default {
     pvcsResource: {
       handler(pvc) {
         if (pvc?.spec?.resources?.requests?.storage) {
-          this.value.size = pvc.spec.resources.requests.storage;
+          const parseValue = parseSi(pvc.spec.resources.requests.storage);
+
+          const formatSize = formatSi(parseValue, {
+            increment:   1024,
+            addSuffix:   false,
+            maxExponent: 3,
+            minExponent: 3,
+          });
+
+          this.value.size = `${ formatSize }Gi`;
         }
       },
       deep:      true,
@@ -127,17 +142,17 @@ export default {
       </div>
     </div>
 
-    <div class="row">
+    <div class="row mb-20">
       <div class="col span-6">
         <InputOrDisplay :name="t('harvester.fields.size')" :value="value.size" :mode="mode">
           <UnitInput
             v-model="value.size"
-            output-suffic-text="Gi"
-            output-as="string"
+            :output-modifier="true"
+            :increment="1024"
+            :input-exponent="3"
             :mode="mode"
             :required="validateRequired"
             :label="t('harvester.fields.size')"
-            suffix="GiB"
             :disabled="isDisabled"
           />
         </InputOrDisplay>
@@ -148,7 +163,6 @@ export default {
           <LabeledSelect
             v-model="value.bus"
             :label="t('harvester.virtualMachine.volume.bus')"
-            class="mb-20"
             :mode="mode"
             :options="interfaceOption"
             required

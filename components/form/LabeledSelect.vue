@@ -17,6 +17,10 @@ export default {
       default: true,
       type:    Boolean,
     },
+    clearable: {
+      default: false,
+      type:    Boolean
+    },
     disabled: {
       default: false,
       type:    Boolean
@@ -129,6 +133,7 @@ export default {
         }
       });
     },
+
     onFocus() {
       this.selectedVisibility = 'hidden';
       this.onFocusLabeled();
@@ -137,6 +142,11 @@ export default {
     onBlur() {
       this.selectedVisibility = 'visible';
       this.onBlurLabeled();
+    },
+
+    onOpen() {
+      this.$emit('on-open');
+      this.resizeHandler();
     },
 
     getOptionLabel(option) {
@@ -211,10 +221,13 @@ export default {
        */
       return () => popper.destroy();
     },
+
     get,
+
     onClickOption(option, event) {
       onClickOption.call(this, option, event);
     },
+
     dropdownShouldOpen(instance, forceOpen = false) {
       const { noDrop, mutableLoading } = instance;
       const { open } = instance;
@@ -233,6 +246,7 @@ export default {
 
       return noDrop ? false : open && shouldOpen && !mutableLoading;
     },
+
     onSearch(newSearchString) {
       if (newSearchString) {
         this.dropdownShouldOpen(this.$refs['select-input'], true);
@@ -294,7 +308,7 @@ export default {
       @search:blur="onBlur"
       @search:focus="onFocus"
       @search="onSearch"
-      @open="resizeHandler"
+      @open="onOpen"
     >
       <template #option="option">
         <template v-if="option.kind === 'group'">

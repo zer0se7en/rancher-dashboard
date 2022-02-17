@@ -1,7 +1,7 @@
 import Vue from 'vue';
 import { load } from 'js-yaml';
 import { colorForState } from '@/plugins/steve/resource-class';
-import { POD, NODE, HCI } from '@/config/types';
+import { POD, NODE, HCI, PVC } from '@/config/types';
 import { findBy } from '@/utils/array';
 import { get } from '@/utils/object';
 import { HCI as HCI_ANNOTATIONS } from '@/config/labels-annotations';
@@ -81,7 +81,6 @@ export default class VirtVm extends SteveModel {
         icon:       'icon icon-close',
         label:      this.t('harvester.action.stop'),
         bulkable:   true,
-        external:   true,
       },
       {
         action:     'pauseVM',
@@ -101,7 +100,6 @@ export default class VirtVm extends SteveModel {
         icon:       'icon icon-refresh',
         label:      this.t('harvester.action.restart'),
         bulkable:   true,
-        external:   true,
       },
       {
         action:     'startVM',
@@ -109,7 +107,6 @@ export default class VirtVm extends SteveModel {
         icon:       'icon icon-play',
         label:      this.t('harvester.action.start'),
         bulkable:   true,
-        external:   true,
       },
       {
         action:     'backupVM',
@@ -153,6 +150,13 @@ export default class VirtVm extends SteveModel {
         icon:       'icon icon-copy',
         label:      this.t('harvester.action.createTemplate'),
       },
+      {
+        action:     'openLogs',
+        enabled:    !!this.links.view,
+        icon:       'icon icon-fw icon-chevron-right',
+        label:      this.t('harvester.action.viewlogs'),
+        total:      1,
+      },
       ...out
     ];
   }
@@ -184,7 +188,7 @@ export default class VirtVm extends SteveModel {
               disks: [],
             },
             resources: {
-              requests: {
+              limits: {
                 memory: null,
                 cpu:    ''
               }
@@ -211,6 +215,16 @@ export default class VirtVm extends SteveModel {
     this.doAction('restart', {});
   }
 
+  openLogs() {
+    this.$dispatch('wm/open', {
+      id:        `${ this.id }-logs`,
+      label:     this.nameDisplay,
+      icon:      'file',
+      component: 'ContainerLogs',
+      attrs:     { pod: this.podResource }
+    }, { root: true });
+  }
+
   backupVM(resources = this) {
     this.$dispatch('promptModal', {
       resources,
@@ -218,16 +232,14 @@ export default class VirtVm extends SteveModel {
     });
   }
 
-  unplugVolume() {
+  unplugVolume(diskName) {
     const resources = this;
 
-    return (diskName) => {
-      this.$dispatch('promptModal', {
-        resources,
-        diskName,
-        component: 'harvester/UnplugVolume'
-      });
-    };
+    this.$dispatch('promptModal', {
+      resources,
+      diskName,
+      component: 'harvester/UnplugVolume'
+    });
   }
 
   restoreVM(resources = this) {
@@ -667,6 +679,34 @@ export default class VirtVm extends SteveModel {
     return out;
   }
 
+  get rootImageId() {
+    let imageId = '';
+    const pvcs = this.$rootGetters[`harvester/all`](PVC) || [];
+
+    const volumes = this.spec.template.spec.volumes || [];
+
+    const firstVolumeName = volumes[0]?.persistentVolumeClaim?.claimName;
+    const isNoExistingVolume = this.volumeClaimTemplates.find((volume) => {
+      return firstVolumeName === volume?.metadata?.name;
+    });
+
+    if (!isNoExistingVolume) {
+      const existingVolume = pvcs.find(P => P.id === `${ this.metadata.namespace }/${ firstVolumeName }`);
+
+      if (existingVolume) {
+        return existingVolume?.metadata?.annotations?.['harvesterhci.io/imageId'];
+      }
+    }
+
+    this.volumeClaimTemplates.find( (volume) => {
+      imageId = volume?.metadata?.annotations?.['harvesterhci.io/imageId'];
+
+      return !!imageId;
+    });
+
+    return imageId;
+  }
+
   get restoreName() {
     return get(this, `metadata.annotations."${ HCI_ANNOTATIONS.RESTORE_NAME }"`) || '';
   }
@@ -685,13 +725,12 @@ export default class VirtVm extends SteveModel {
         nullable:       false,
         path:           'spec.template.spec.domain.cpu.cores',
         min:            1,
-        max:            100,
         required:       true,
         translationKey: 'harvester.fields.cpu',
       },
       {
         nullable:       false,
-        path:           'spec.template.spec.domain.resources.requests.memory',
+        path:           'spec.template.spec.domain.resources.limits.memory',
         required:       true,
         translationKey: 'harvester.fields.memory',
       },
@@ -729,5 +768,9 @@ export default class VirtVm extends SteveModel {
     }
 
     return super.stateDescription;
+  }
+
+  get displayMemory() {
+    return this.spec.template.spec.domain.resources?.limits?.memory || this.spec.template.spec.domain.resources?.requests?.memory;
   }
 }

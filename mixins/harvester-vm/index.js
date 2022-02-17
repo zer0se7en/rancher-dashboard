@@ -8,6 +8,7 @@ import { clone } from '@/utils/object';
 import { allHash } from '@/utils/promise';
 import { randomStr } from '@/utils/string';
 import { base64Decode } from '@/utils/crypto';
+import { formatSi, parseSi } from '@/utils/units';
 import { SOURCE_TYPE } from '@/config/harvester-map';
 import { _CLONE } from '@/config/query-params';
 import {
@@ -61,8 +62,6 @@ const OS = [{
 const CD_ROM = 'cd-rom';
 const HARD_DISK = 'disk';
 
-const QEMU_RESERVE = 0.1;
-
 export default {
   mixins: [impl],
 
@@ -101,6 +100,20 @@ export default {
 
     if (isClone) {
       this.deleteCloneValue();
+    }
+
+    if (type === HCI.VM) {
+      const resources = this.value.spec.template.spec.domain.resources;
+
+      if (!resources?.limits || (resources?.limits && !resources?.limits?.memory && resources?.limits?.memory !== null)) {
+        this.value.spec.template.spec.domain.resources = {
+          ...this.value.spec.template.spec.domain.resources,
+          limits: {
+            ...this.value.spec.template.spec.domain.resources.limits,
+            memory: this.value.spec.template.spec.domain.resources.requests.memory
+          }
+        };
+      }
     }
 
     return {
@@ -160,10 +173,10 @@ export default {
 
     memory: {
       get() {
-        return this.spec.template.spec.domain.resources.requests.memory;
+        return this.spec.template.spec.domain.resources.limits.memory;
       },
       set(neu) {
-        this.$set(this.spec.template.spec.domain.resources.requests, 'memory', neu);
+        this.$set(this.spec.template.spec.domain.resources.limits, 'memory', neu);
       }
     },
 
@@ -201,7 +214,7 @@ export default {
     },
 
     needNewSecret() {
-      if (this.type === HCI.VM_VERSION) {
+      if (this.type === HCI.VM_VERSION || this.isCreate) {
         return true;
       }
     }
@@ -232,14 +245,17 @@ export default {
       const networkRows = this.getNetworkRows(vm) || [];
       const hasCreateVolumes = this.getHasCreatedVolumes(spec) || [];
 
-      let { userData = null, networkData = null } = this.getSecretCloudData(spec);
+      let { userData = undefined, networkData = undefined } = this.getSecretCloudData(spec);
 
       if (this.type === HCI.BACKUP) {
         const secretBackups = this.value.status.secretBackups;
 
         if (secretBackups) {
-          userData = base64Decode(secretBackups[0]?.data?.userdata);
-          networkData = base64Decode(secretBackups[0]?.data?.networkdata);
+          const secretNetworkData = secretBackups[0]?.data?.networkdata || '';
+          const secretUserData = secretBackups[0]?.data?.userdata || '';
+
+          userData = base64Decode(secretUserData);
+          networkData = base64Decode(secretNetworkData);
         }
       }
       const osType = this.getOsType(vm);
@@ -355,6 +371,15 @@ export default {
 
           const bootOrder = DISK?.bootOrder ? DISK?.bootOrder : index;
 
+          const parseValue = parseSi(size);
+
+          const formatSize = formatSi(parseValue, {
+            increment:   1024,
+            addSuffix:   false,
+            maxExponent: 3,
+            minExponent: 3,
+          });
+
           return {
             id:           randomStr(5),
             bootOrder,
@@ -365,7 +390,7 @@ export default {
             volumeName,
             container,
             accessMode,
-            size,
+            size:       `${ formatSize }Gi`,
             volumeMode:    volumeMode || this.customVolumeMode,
             image,
             type,
@@ -419,20 +444,7 @@ export default {
         this.$set(this.spec.template.spec.domain.machine, 'type', this.machineType);
       }
 
-      if (!this.spec.template.spec.domain.guest) {
-        this.spec.template.spec.domain = {
-          ...this.spec.template.spec.domain,
-          memory: { guest: '' }
-        };
-      }
-
-      this.spec.template.spec.domain.resources.requests.cpu = this.spec.template.spec.domain.cpu.cores;
-
-      if ( this.memory) {
-        const [memoryValue, memoryUnit] = this.memory?.split(/(?=([a-zA-Z]+))/g);
-
-        this.spec.template.spec.domain.memory.guest = `${ memoryValue - QEMU_RESERVE }${ memoryUnit }`;
-      }
+      this.spec.template.spec.domain.resources.limits.cpu = this.spec.template.spec.domain.cpu.cores;
     },
 
     parseDiskRows(disk) {
@@ -596,7 +608,7 @@ export default {
         userDataJson.ssh_authorized_keys = this.getSSHListValue(this.sshKey);
       }
 
-      if (userDataJson.ssh_authorized_keys && userDataJson.ssh_authorized_keys.lenght === 0) {
+      if (userDataJson.ssh_authorized_keys && userDataJson.ssh_authorized_keys.length === 0) {
         delete userDataJson.ssh_authorized_keys;
       }
 
@@ -827,7 +839,7 @@ export default {
     },
 
     generateSecretName(name) {
-      return `${ name }-${ randomStr(5).toLowerCase() }`;
+      return name ? `${ name }-${ randomStr(5).toLowerCase() }` : undefined;
     },
 
     getOwnerReferencesFromVM(resource) {
@@ -845,7 +857,7 @@ export default {
     },
 
     async saveSecret(vm) {
-      if (!vm?.spec) {
+      if (!vm?.spec || !this.secretName) {
         return true;
       }
 

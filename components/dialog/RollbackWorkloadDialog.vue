@@ -5,16 +5,34 @@ import Card from '@/components/Card';
 import { exceptionToErrorsArray } from '@/utils/error';
 import LabeledSelect from '@/components/form/LabeledSelect';
 import Banner from '@/components/Banner';
+import YamlEditor, { EDITOR_MODES } from '@/components/YamlEditor';
 import { WORKLOAD_TYPES } from '@/config/types';
 import { diffFrom } from '@/utils/time';
 import { mapGetters } from 'vuex';
+import { ACTIVELY_REMOVE, NEVER_ADD } from '@/utils/create-yaml';
+
+const HIDE = [
+  'metadata.labels.pod-template-hash',
+  'spec.selector.matchLabels.pod-template-hash',
+  'spec.template.metadata.labels.pod-template-hash',
+  'metadata.fields'
+];
+
+const REMOVE = [...ACTIVELY_REMOVE, ...NEVER_ADD, ...HIDE];
+
+const REMOVE_KEYS = REMOVE.reduce((obj, item) => {
+  obj[item] = true;
+
+  return obj;
+}, {});
 
 export default {
   components: {
     Card,
     AsyncButton,
     LabeledSelect,
-    Banner
+    Banner,
+    YamlEditor,
   },
   props:      {
     resources: {
@@ -28,6 +46,8 @@ export default {
       selectedRevision:   null,
       currentRevision:    null,
       revisions:          [],
+      editorMode:         EDITOR_MODES.DIFF_CODE,
+      showDiff:           false,
     };
   },
   computed: {
@@ -72,6 +92,12 @@ export default {
       ];
 
       return body;
+    },
+    selectedRevisionId() {
+      return this.selectedRevision.id;
+    },
+    sanitizedSelectedRevision() {
+      return this.sanitizeYaml(this.selectedRevision);
     }
   },
   fetch() {
@@ -96,15 +122,17 @@ export default {
           return hasRelationshipWithCurrentWorkload( replicaSet );
         });
 
-        const revisionOptions = workloadRevisions.map( (revision ) => {
-          const isCurrentRevision = this.getRevisionNumber(revision) === this.currentRevisionNumber;
+        const revisionOptions = workloadRevisions
+          .map( (revision ) => {
+            const isCurrentRevision = this.getRevisionNumber(revision) === this.currentRevisionNumber;
 
-          if (isCurrentRevision) {
-            this.currentRevision = revision;
-          }
+            if (isCurrentRevision) {
+              this.currentRevision = revision;
+            }
 
-          return this.buildRevisionOption( revision );
-        });
+            return this.buildRevisionOption( revision );
+          })
+          .sort((a, b) => b.revisionNumber - a.revisionNumber);
 
         this.revisions = revisionOptions;
       })
@@ -145,12 +173,42 @@ export default {
       return {
         label:    optionLabel,
         value:    revision,
-        disabled: isCurrentRevision
+        disabled: isCurrentRevision,
+        revisionNumber
       };
     },
     getOptionLabel(option) {
       return option.label;
     },
+    sizeDialog() {
+      const dialogs = document.getElementsByClassName('v--modal');
+      const width = this.showDiff ? '85%' : '600px';
+
+      if (dialogs.length === 1) {
+        dialogs[0].style.setProperty('--prompt-modal-width', width);
+      }
+    },
+    sanitizeYaml(obj, path = '') {
+      const res = {};
+
+      if (!obj) {
+        return obj;
+      }
+
+      Object.keys(obj).forEach((key) => {
+        const keyPath = !path ? key : `${ path }.${ key }`;
+
+        if (!REMOVE_KEYS[keyPath]) {
+          res[key] = obj[key];
+
+          if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+            res[key] = this.sanitizeYaml(obj[key], keyPath);
+          }
+        }
+      });
+
+      return res;
+    }
   }
 };
 </script>
@@ -163,7 +221,7 @@ export default {
     <h4 slot="title" class="text-default-text">
       {{ t('promptRollback.modalTitle', { workloadName }, true) }}
     </h4>
-    <div slot="body" class="pl-10 pr-10">
+    <div slot="body" class="pl-10 pr-10 ">
       <Banner v-if="revisions.length === 1" color="info" :label="t('promptRollback.singleRevisionBanner')" />
       <form>
         <LabeledSelect
@@ -176,39 +234,72 @@ export default {
         />
       </form>
       <Banner v-for="(error, i) in errors" :key="i" class="" color="error" :label="error" />
-    </div>
-    <div slot="actions" class="buttons right-align">
-      <button class="btn role-secondary mr-10" @click="close">
-        {{ t('generic.cancel') }}
-      </button>
-      <AsyncButton
-        :action-label="t('asyncButton.rollback.action')"
-        :disabled="!selectedRevision"
-        get-option-label="getOptionLabel"
-        :right-align="true"
-        @click="save"
+      <YamlEditor
+        v-if="selectedRevision && showDiff"
+        :key="selectedRevisionId"
+        v-model="sanitizedSelectedRevision"
+        :initial-yaml-values="sanitizeYaml(currentRevision)"
+        class="mt-10 "
+        :editor-mode="editorMode"
+        :as-object="true"
       />
+    </div>
+    <div slot="actions" class="buttons ">
+      <div class="left">
+        <button
+          :disabled="!selectedRevision"
+          class="btn role-secondary diff"
+          @click="showDiff = !showDiff; sizeDialog()"
+        >
+          {{ showDiff ? t('resourceYaml.buttons.hideDiff') : t('resourceYaml.buttons.diff') }}
+        </button>
+      </div>
+      <div class="right">
+        <button class="btn role-secondary mr-10" @click="close">
+          {{ t('generic.cancel') }}
+        </button>
+        <AsyncButton
+          :action-label="t('asyncButton.rollback.action')"
+          :disabled="!selectedRevision"
+          get-option-label="getOptionLabel"
+          :right-align="true"
+          @click="save"
+        />
+      </div>
     </div>
   </Card>
 </template>
 <style lang='scss' scoped>
-  .prompt-rollback {
-    margin: 0;
+
+.prompt-rollback {
+  margin: 0;
+
+  & ::v-deep .card-actions {
+    display: grid;
   }
-  .right-align {
-    margin-right: 0;
-    margin-left: auto;
+}
+
+.yaml-editor {
+  max-height: 70vh;
+
+  & ::v-deep.root {
+    max-height: 65vh;
   }
-  .bottom {
-    flex-direction: column;
-    flex: 1;
-    .banner {
-      margin-top: 0
-    }
-    .buttons {
-      display: flex;
-      justify-content: flex-end;
-      width: 100%;
-    }
+}
+
+.diff {
+  &:disabled {
+    border: none;
   }
+  &:focus {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+::v-deep .card-body {
+  max-height: calc(95vh - 135px);
+  overflow: hidden;
+}
+
 </style>

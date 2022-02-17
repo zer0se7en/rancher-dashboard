@@ -44,8 +44,10 @@ export default {
       default: ''
     },
     protip: {
-      type:    [String, Boolean],
-      default: 'Paste lines of <em>key=value</em> or <em>key: value</em> into any key field for easy bulk entry',
+      type: [String, Boolean],
+      default() {
+        return this.$store.getters['i18n/t']('keyValue.protip', null, true);
+      },
     },
 
     // For asMap=false, the name of the field that goes into the row objects
@@ -151,7 +153,7 @@ export default {
     },
 
     // For asMap=false, preserve (copy) these keys from the original value into the emitted value.
-    // Also usefule for valueFrom as above.
+    // Also useful for valueFrom as above.
     preserveKeys: {
       type:    Array,
       default: null,
@@ -216,7 +218,6 @@ export default {
       type:    Boolean,
       default: true,
     },
-
     fileModifier: {
       type:    Function,
       default: (name, value) => ({ name, value })
@@ -229,6 +230,10 @@ export default {
       default: false,
       type:    Boolean
     },
+    parseLinesFromFile: {
+      default: false,
+      type:    Boolean
+    }
   },
 
   data() {
@@ -267,16 +272,15 @@ export default {
           supported:        this.supported(row),
         };
 
-        for ( const k of this.preserveKeys ) {
+        this.preserveKeys?.map((k) => {
           if ( typeof row[k] !== 'undefined' ) {
             entry[k] = row[k];
           }
-        }
+        });
 
         rows.push(entry);
       }
     }
-
     if ( !rows.length && this.initialEmptyRow ) {
       rows.push({
         [this.keyName]:   '',
@@ -295,7 +299,10 @@ export default {
     },
 
     containerStyle() {
-      return `grid-template-columns: repeat(${ 2 + this.extraColumns.length }, 1fr)${ this.removeAllowed ? ' 50px' : '' };`;
+      const gap = this.canRemove ? ' 50px' : '';
+      const size = 2 + this.extraColumns.length;
+
+      return `grid-template-columns: repeat(${ size }, 1fr)${ gap };`;
     },
 
     usedKeyOptions() {
@@ -309,6 +316,13 @@ export default {
       }
 
       return this.keyOptions;
+    },
+
+    /**
+     * Prevent removal if expressly not allowed and not in view mode
+     */
+    canRemove() {
+      return !this.isView && this.removeAllowed;
     }
   },
 
@@ -356,7 +370,20 @@ export default {
     onFileSelected(file) {
       const { name, value } = this.fileModifier(file.name, file.value);
 
-      this.add(name, value, !asciiLike(value));
+      if (!this.parseLinesFromFile) {
+        this.add(name, value, !asciiLike(value));
+      } else {
+        const lines = value.split('\n');
+
+        lines.forEach((line) => {
+          // Ignore empty lines
+          if (line.length) {
+            const [key, value] = line.split('=');
+
+            this.add(key, value);
+          }
+        });
+      }
     },
 
     download(idx, ev) {
@@ -431,11 +458,9 @@ export default {
       const text = event.clipboardData.getData('text/plain');
       const lines = text.split('\n');
       const splits = lines.map((line) => {
-        if (line.includes(':')) {
-          return line.split(':');
-        }
+        const splitter = !line.includes(':') || ((line.indexOf('=') < line.indexOf(':')) && line.includes(':')) ? '=' : ':';
 
-        return line.split('=');
+        return line.split(splitter);
       });
 
       if (splits.length === 0 || (splits.length === 1 && splits[0].length < 2)) {
@@ -446,6 +471,7 @@ export default {
       const keyValues = splits.map(split => ({
         [this.keyName]:   (split[0] || '').trim(),
         [this.valueName]: (split[1] || '').trim(),
+        supported:        true,
         binary:           !asciiLike(split[1])
       }));
 
@@ -491,11 +517,10 @@ export default {
         <label v-for="c in extraColumns" :key="c">
           <slot :name="'label:'+c">{{ c }}</slot>
         </label>
-        <slot v-if="removeAllowed" name="remove">
+        <slot v-if="canRemove" name="remove">
           <span />
         </slot>
       </template>
-
       <template v-if="!rows.length && isView">
         <div class="kv-item key text-muted">
           &mdash;
@@ -557,7 +582,7 @@ export default {
               :class="{'conceal': valueConcealed}"
               :mode="mode"
               :placeholder="valuePlaceholder"
-              :min-height="61"
+              :min-height="40"
               :spellcheck="false"
               @input="queueUpdate"
             />
@@ -579,7 +604,12 @@ export default {
           <slot :name="'col:' + c" :row="row" :queue-update="queueUpdate" />
         </div>
 
-        <div v-if="removeAllowed" :key="i" class="kv-item remove">
+        <div
+          v-if="canRemove"
+          :key="i"
+          class="kv-item remove"
+          :data-testid="`remove-column-${i}`"
+        >
           <slot name="removeButton" :remove="remove" :row="row">
             <button type="button" :disabled="isView" class="btn role-link" @click="remove(i)">
               {{ removeLabel || t('generic.remove') }}
@@ -660,7 +690,8 @@ export default {
   }
 
   input {
-    height: $input-height;
+    height: 40px;
+    line-height: 1;
   }
 
   .footer {

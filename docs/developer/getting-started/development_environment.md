@@ -31,6 +31,12 @@ See https://rancher.com/docs/rancher/v2.6/en/installation/. This covers two meth
 - [Single Docker Container](https://rancher.com/docs/rancher/v2.6/en/installation/other-installation-methods/single-node-docker/)
 - [Kube Cluster (via Helm)](https://rancher.com/docs/rancher/v2.6/en/installation/install-rancher-on-k8s/)
 
+To use the most recent version of Rancher that is actively in development, use the version tag `v2.6-head` when installing Rancher. For example, the Docker installation command would look like this:
+
+```
+sudo docker run -d --restart=unless-stopped -p 80:80 -p 443:443 --privileged rancher/rancher:v2.6-head
+```
+
 Note that for Rancher to provision and manage downstream clusters, the Rancher server URL must be accessible from the Internet. If you’re running Rancher in Docker Desktop, the Rancher server URL is `https://localhost`. To make Rancher accessible to downstream clusters for development, you can:
 
 - Use ngrok to test provisioning with a local rancher server
@@ -74,7 +80,7 @@ See the [Running For Development](../../../README.md#running-for-development) se
 ### Debugging the Dashboard
 
 #### SSR vs SPA
-It's important to understand the difference between SSR and SPA modes described in the [Server-Side-Rendering (SSR)](../../../README.md#server-side-rendering-ssr) section. When running in the default SSR mode you will not be able to step through some methods such as Vue component's `async fetch`. It is therefore advised to switch to SPA mode before attempting to step through the code (see linked guide.. either start with `--spa` or load page with url parm `?spa` / `&spa`).
+It's important to understand the difference between SSR and SPA modes described in the [Server-Side-Rendering (SSR)](../../../README.md#server-side-rendering-ssr) section. When running in the default SSR mode you will not be able to step through some methods such as Vue component's `async fetch`. It is therefore advised to switch to SPA mode before attempting to step through the code (see linked guide.. either start with `--spa` or load page with url param `?spa` / `&spa`).
 
 SSR adds additional complexity for the store and some component functions. More on this can be found in the `Resource` section of Development guide.
 

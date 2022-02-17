@@ -4,7 +4,7 @@ import has from 'lodash/has';
 import reduce from 'lodash/reduce';
 
 import CreateEditView from '@/mixins/create-edit-view';
-import FleetSummary from '@/components/FleetSummary';
+import FleetSummary from '@/components/fleet/FleetSummary';
 import ResourceTabs from '@/components/form/ResourceTabs';
 
 import { COUNT } from '@/config/types';
@@ -37,7 +37,8 @@ export default {
 
   computed: {
     namespacedCounts() {
-      const allClusterResourceCounts = this.$store.getters[`cluster/all`](COUNT)[0].counts;
+      const inStore = this.$store.getters['currentProduct'].inStore;
+      const allClusterResourceCounts = this.$store.getters[`${ inStore }/all`](COUNT)[0].counts;
       const statesByType = getStatesByType();
       const totalCountsOut = {
         success: 0,

@@ -1,10 +1,11 @@
 import { findBy, insertAt } from '@/utils/array';
-import { TARGET_WORKLOADS, TIMESTAMP, UI_MANAGED } from '@/config/labels-annotations';
-import { WORKLOAD_TYPES, SERVICE } from '@/config/types';
+import { TARGET_WORKLOADS, TIMESTAMP, UI_MANAGED, HCI as HCI_LABELS_ANNOTATIONS } from '@/config/labels-annotations';
+import { WORKLOAD_TYPES, SERVICE, POD } from '@/config/types';
 import { clone, get, set } from '@/utils/object';
 import day from 'dayjs';
 import SteveModel from '@/plugins/steve/steve-class';
 import { shortenedImage } from '@/utils/string';
+import { convertSelectorObj, matching } from '@/utils/selector';
 
 export default class Workload extends SteveModel {
   // remove clone as yaml/edit as yaml until API supported
@@ -13,11 +14,11 @@ export default class Workload extends SteveModel {
     const type = this._type ? this._type : this.type;
 
     const editYaml = findBy(out, 'action', 'goToEditYaml');
-    const index = editYaml ? out.indexOf(editYaml) + 1 : 0;
+    const index = editYaml ? out.indexOf(editYaml) : 0;
 
     insertAt(out, index, {
       action:  'addSidecar',
-      label:   'Add Sidecar',
+      label:   this.t('action.addSidecar'),
       icon:    'icon icon-plus',
       enabled: !!this.links.update,
     });
@@ -25,14 +26,14 @@ export default class Workload extends SteveModel {
     if (type !== WORKLOAD_TYPES.JOB && type !== WORKLOAD_TYPES.CRON_JOB) {
       insertAt(out, 0, {
         action:  'toggleRollbackModal',
-        label:   'Rollback',
+        label:   this.t('action.rollback'),
         icon:    'icon icon-history',
         enabled: !!this.links.update,
       });
 
       insertAt(out, 0, {
         action:     'redeploy',
-        label:      'Redeploy',
+        label:      this.t('action.redeploy'),
         icon:       'icon icon-refresh',
         enabled:    !!this.links.update,
         bulkable:   true,
@@ -52,6 +53,16 @@ export default class Workload extends SteveModel {
         enabled: !!this.links.update && this.spec?.paused === true
       });
     }
+
+    insertAt(out, 0, { divider: true }) ;
+
+    insertAt(out, 0, {
+      action:     'openShell',
+      enabled:    !!this.links.view,
+      icon:       'icon icon-fw icon-chevron-right',
+      label:      this.t('action.openShell'),
+      total:      1,
+    });
 
     const toFilter = ['cloneYaml'];
 
@@ -127,12 +138,43 @@ export default class Workload extends SteveModel {
     this.save();
   }
 
+  async scaleDown() {
+    const newScale = this.spec.replicas - 1;
+
+    if (newScale >= 0) {
+      set(this.spec, 'replicas', newScale);
+      await this.save();
+    }
+  }
+
+  async scaleUp() {
+    set(this.spec, 'replicas', this.spec.replicas + 1);
+    await this.save();
+  }
+
   get state() {
     if ( this.spec?.paused === true ) {
       return 'paused';
     }
 
     return super.state;
+  }
+
+  async openShell() {
+    const pods = await this.matchingPods();
+
+    for ( const pod of pods ) {
+      if ( pod.isRunning ) {
+        pod.openShell();
+
+        return;
+      }
+    }
+
+    this.$dispatch('growl/error', {
+      title:   'Unavailable',
+      message: 'There are no running pods to execute a shell in.'
+    }, { root: true });
   }
 
   addSidecar() {
@@ -394,6 +436,11 @@ export default class Workload extends SteveModel {
       const name = port.name ? port.name : `${ port.containerPort }${ port.protocol.toLowerCase() }${ port.hostPort || port._listeningPort || '' }`;
 
       port.name = name;
+
+      if (port._serviceType && port._serviceType !== '') {
+        return;
+      }
+
       if (loadBalancerServicePorts.length) {
         const portSpec = findBy(loadBalancerServicePorts, 'name', name);
 
@@ -504,7 +551,6 @@ export default class Workload extends SteveModel {
         }
       });
     }
-
     ports.forEach((port) => {
       const portSpec = {
         name: port.name, protocol: port.protocol, port: port.containerPort, targetPort: port.containerPort
@@ -571,6 +617,14 @@ export default class Workload extends SteveModel {
       if (loadBalancer.id) {
         loadBalancerProxy = loadBalancer;
       } else {
+        loadBalancer = clone(loadBalancer);
+
+        const portsWithIpam = ports.filter(p => p._ipam) || [];
+
+        if (portsWithIpam.length > 0) {
+          loadBalancer.metadata.annotations[HCI_LABELS_ANNOTATIONS.CLOUD_PROVIDER_IPAM] = portsWithIpam[0]._ipam;
+        }
+
         loadBalancerProxy = await this.$dispatch(`cluster/create`, loadBalancer, { root: true });
       }
       toSave.push(loadBalancerProxy);
@@ -607,5 +661,91 @@ export default class Workload extends SteveModel {
     } else {
       return null;
     }
+  }
+
+  get pods() {
+    const relationships = get(this, 'metadata.relationships') || [];
+    const podRelationship = relationships.filter(relationship => relationship.toType === POD)[0];
+
+    if (podRelationship) {
+      return this.$getters['matching'](POD, podRelationship.selector).filter(pod => pod?.metadata?.namespace === this.metadata.namespace);
+    } else {
+      return [];
+    }
+  }
+
+  get podGauges() {
+    const out = { };
+
+    if (!this.pods) {
+      return out;
+    }
+
+    this.pods.map((pod) => {
+      const { stateColor, stateDisplay } = pod;
+
+      if (out[stateDisplay]) {
+        out[stateDisplay].count++;
+      } else {
+        out[stateDisplay] = {
+          color: stateColor.replace('text-', ''),
+          count: 1
+        };
+      }
+    });
+
+    return out;
+  }
+
+  // Job Specific
+  get jobRelationships() {
+    if (this.type !== WORKLOAD_TYPES.CRON_JOB) {
+      return undefined;
+    }
+
+    return (get(this, 'metadata.relationships') || []).filter(relationship => relationship.toType === WORKLOAD_TYPES.JOB);
+  }
+
+  get jobs() {
+    if (this.type !== WORKLOAD_TYPES.CRON_JOB) {
+      return undefined;
+    }
+
+    return this.jobRelationships.map((obj) => {
+      return this.$getters['byId'](WORKLOAD_TYPES.JOB, obj.toId );
+    }).filter(x => !!x);
+  }
+
+  get jobGauges() {
+    const out = {
+      succeeded: { color: 'success', count: 0 }, running: { color: 'info', count: 0 }, failed: { color: 'error', count: 0 }
+    };
+
+    if (this.type === WORKLOAD_TYPES.CRON_JOB) {
+      this.jobs.forEach((job) => {
+        const { status = {} } = job;
+
+        out.running.count += status.active || 0;
+        out.succeeded.count += status.succeeded || 0;
+        out.failed.count += status.failed || 0;
+      });
+    } else if (this.type === WORKLOAD_TYPES.JOB) {
+      const { status = {} } = this;
+
+      out.running.count = status.active || 0;
+      out.succeeded.count = status.succeeded || 0;
+      out.failed.count = status.failed || 0;
+    } else {
+      return null;
+    }
+
+    return out;
+  }
+
+  async matchingPods() {
+    const all = await this.$dispatch('findAll', { type: POD });
+    const selector = convertSelectorObj(this.spec.selector);
+
+    return matching(all, selector);
   }
 }

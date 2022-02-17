@@ -9,6 +9,9 @@ import { findBy } from '@/utils/array';
 import { NAME as HARVESTER } from '@/config/product/harvester';
 
 export default {
+
+  name: 'ResourceTable',
+
   components: { ButtonGroup, SortableTable },
 
   props: {
@@ -62,6 +65,15 @@ export default {
     groupTooltip: {
       type:    String,
       default: 'resourceTable.groupBy.namespace',
+    },
+
+    overflowX: {
+      type:    Boolean,
+      default: false
+    },
+    overflowY: {
+      type:    Boolean,
+      default: false
     },
   },
 
@@ -263,6 +275,8 @@ export default {
     :paging-params="pagingParams"
     :paging-label="pagingLabel"
     :table-actions="_showBulkActions"
+    :overflow-x="overflowX"
+    :overflow-y="overflowY"
     key-field="_key"
     :sort-generation-fn="sortGenerationFn"
     v-on="$listeners"

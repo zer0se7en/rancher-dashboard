@@ -11,7 +11,7 @@ import { addObject, addObjects, findBy, removeAt } from '@/utils/array';
 import CustomValidators from '@/utils/custom-validators';
 import { downloadFile, generateZip } from '@/utils/download';
 import { eachLimit } from '@/utils/promise';
-import { get } from '@/utils/object';
+import { clone, get } from '@/utils/object';
 import { DEV } from '@/store/prefs';
 import { sortableNumericSuffix } from '@/utils/sort';
 import {
@@ -59,6 +59,7 @@ const REMAP_STATE = {
   waitcheckin:              'Wait Check-In',
   off:                      'Disabled',
   waitingforinfrastructure: 'Waiting for Infra',
+  waitingfornoderef:        'Waiting for Node Ref'
 };
 
 const DEFAULT_COLOR = 'warning';
@@ -68,6 +69,7 @@ const DEFAULT_WAIT_INTERVAL = 1000;
 const DEFAULT_WAIT_TMIMEOUT = 30000;
 
 export const STATES = {
+  'in-use':           { color: 'success', icon: 'dot-open' },
   'in-progress':      { color: 'info', icon: 'tag' },
   'pending-rollback': { color: 'info', icon: 'dot-half' },
   'pending-upgrade':  { color: 'info', icon: 'dot-half' },
@@ -131,6 +133,7 @@ export const STATES = {
   requested:          { color: 'info', icon: 'tag' },
   restarting:         { color: 'info', icon: 'adjust' },
   restoring:          { color: 'info', icon: 'medicalcross' },
+  resizing:           { color: 'warning', icon: 'dot' },
   running:            { color: 'success', icon: 'dot-open' },
   skip:               { color: 'info', icon: 'dot-open' },
   skipped:            { color: 'info', icon: 'dot-open' },
@@ -284,15 +287,15 @@ export default class Resource {
   get customValidationRules() {
     return [
       /**
-       * Essentially a fake schema object with additonal params to extend validation
+       * Essentially a fake schema object with additional params to extend validation
        *
-       * @param {nullable} Value is nullabel
+       * @param {nullable} Value is nullable
        * @param {path} Path on the resource to the value to validate
        * @param {required} Value required
        * @param {requiredIf} Value required if value at path not empty
        * @param {translationKey} Human readable display key for param in path e.g. metadata.name === Name
        * @param {type} Type of field to validate
-       * @param {validators} array of strings where item is name of exported validator function in custom-validtors, args can be passed by prepending args seperated by colon. e.g maxLength:63
+       * @param {validators} array of strings where item is name of exported validator function in custom-validators, args can be passed by prepending args separated by colon. e.g maxLength:63
        */
       /* {
         nullable:       false,
@@ -603,8 +606,8 @@ export default class Resource {
         enabled:  this.canCustomEdit,
       },
       {
-        action:  this.canUpdate ? 'goToEditYaml' : 'goToViewYaml',
-        label:   this.t(this.canUpdate ? 'action.editYaml' : 'action.viewYaml'),
+        action:  this.canEditYaml ? 'goToEditYaml' : 'goToViewYaml',
+        label:   this.t(this.canEditYaml ? 'action.editYaml' : 'action.viewYaml'),
         icon:    'icon icon-file',
         enabled: this.canYaml,
       },
@@ -681,6 +684,10 @@ export default class Resource {
 
   get canYaml() {
     return this.hasLink('view');
+  }
+
+  get canEditYaml() {
+    return this.schema?.resourceMethods?.find(x => x === 'blocked-PUT') ? false : this.canUpdate;
   }
 
   // ------------------------------------------------------------------
@@ -837,7 +844,11 @@ export default class Resource {
     return this;
   }
 
-  async remove(opt = {}) {
+  remove() {
+    return this._remove(...arguments);
+  }
+
+  async _remove(opt = {}) {
     if ( !opt.url ) {
       opt.url = this.linkFor('self');
     }
@@ -1329,7 +1340,7 @@ export default class Resource {
         const allOfResourceType = this.$rootGetters['cluster/all']( type );
 
         this.ownersByType[kind].forEach((resource, idx) => {
-          const resourceInstance = allOfResourceType.find(resource => resource?.metdata?.uid === resource.uid);
+          const resourceInstance = allOfResourceType.find(resourceByType => resourceByType?.metadata?.uid === resource.uid);
 
           if (resourceInstance) {
             owners.push(resourceInstance);
@@ -1492,7 +1503,7 @@ export default class Resource {
       if ( this[k]?.toJSON ) {
         out[k] = this[k].toJSON();
       } else {
-        out[k] = this[k];
+        out[k] = clone(this[k]);
       }
     }
 

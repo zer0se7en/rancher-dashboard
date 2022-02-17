@@ -3,7 +3,8 @@ import { CAPI as CAPI_LABELS, MACHINE_ROLES } from '@/config/labels-annotations'
 import { NAME as EXPLORER } from '@/config/product/explorer';
 import { listNodeRoles } from '@/models/cluster/node';
 import { escapeHtml } from '@/utils/string';
-import { insertAt } from '@/utils/array';
+import { insertAt, findBy } from '@/utils/array';
+import { get } from '@/utils/object';
 import { downloadUrl } from '@/utils/download';
 import SteveModel from '@/plugins/steve/steve-class';
 
@@ -13,7 +14,7 @@ export default class CapiMachine extends SteveModel {
 
     const openSsh = {
       action:     'openSsh',
-      enabled:    !!this.links.shell,
+      enabled:    !!this.links.shell && this.isRunning,
       icon:       'icon icon-fw icon-chevron-right',
       label:      'SSH Shell',
     };
@@ -23,10 +24,27 @@ export default class CapiMachine extends SteveModel {
       icon:       'icon icon-fw icon-download',
       label:      this.t('node.actions.downloadSSHKey'),
     };
+    const forceRemove = {
+      action:     'toggleForceRemoveModal',
+      altAction:  'forceMachineRemove',
+      enabled:    !!this.isRemoveForceable,
+      label:      this.t('node.actions.forceDelete'),
+      icon:       'icon icon-trash',
+    };
+    const scaleDown = {
+      action:     'toggleScaleDownModal',
+      bulkAction: 'toggleScaleDownModal',
+      enabled:    !!this.canScaleDown,
+      icon:       'icon icon-minus icon-fw',
+      label:      this.t('node.actions.scaleDown'),
+      bulkable:   true
+    };
 
     insertAt(out, 0, { divider: true });
     insertAt(out, 0, downloadKeys);
     insertAt(out, 0, openSsh);
+    insertAt(out, 0, scaleDown);
+    insertAt(out, 0, forceRemove);
 
     return out;
   }
@@ -47,6 +65,36 @@ export default class CapiMachine extends SteveModel {
 
   downloadKeys() {
     downloadUrl(this.links.sshkeys);
+  }
+
+  toggleForceRemoveModal(resources = this) {
+    this.$dispatch('promptModal', {
+      resources,
+      component: 'ForceMachineRemoveDialog'
+    });
+  }
+
+  async forceMachineRemove() {
+    const machine = await this.machineRef();
+
+    machine.setAnnotation(CAPI_LABELS.FORCE_MACHINE_REMOVE, 'true');
+    await machine.save();
+  }
+
+  toggleScaleDownModal(resources = this) {
+    this.$dispatch('promptModal', {
+      resources,
+      component:  'ScaleMachineDownDialog',
+      modalWidth: '450px'
+    });
+  }
+
+  async machineRef() {
+    const ref = this.spec.infrastructureRef;
+    const id = `${ ref.namespace }/${ ref.name }`;
+    const kind = `rke-machine.cattle.io.${ ref.kind.toLowerCase() }`;
+
+    return await this.$dispatch('find', { type: kind, id });
   }
 
   get cluster() {
@@ -120,9 +168,47 @@ export default class CapiMachine extends SteveModel {
     return `${ this.labels[MACHINE_ROLES.ETCD] }` === 'true';
   }
 
+  get isRemoveForceable() {
+    const conditions = get(this, 'status.conditions');
+    const reasonMessage = (findBy(conditions, 'type', 'InfrastructureReady') || {}).reason;
+
+    if (reasonMessage === 'DeleteError') {
+      return true;
+    }
+
+    return null;
+  }
+
+  get canScaleDown() {
+    if (!this.canUpdate || !this.pool?.canUpdate) {
+      return false;
+    }
+
+    if (!this.isControlPlane) {
+      return true;
+    }
+
+    let foundControlPlane;
+
+    for (const m of this.cluster.machines) {
+      if (m.isControlPlane) {
+        if (foundControlPlane) {
+          return true;
+        }
+        foundControlPlane = true;
+      }
+    }
+
+    return false;
+  }
+
   get roles() {
     const { isControlPlane, isWorker, isEtcd } = this;
 
     return listNodeRoles(isControlPlane, isWorker, isEtcd, this.t('generic.all'));
+  }
+
+  get isRunning() {
+    return this.status.phase === 'Running';
   }
 }

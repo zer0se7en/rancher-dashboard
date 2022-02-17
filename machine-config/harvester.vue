@@ -17,6 +17,7 @@ import { base64Decode, base64Encode } from '@/utils/crypto';
 import { allHashSettled } from '@/utils/promise';
 import { stringify, exceptionToErrorsArray } from '@/utils/error';
 import { HCI as HCI_ANNOTATIONS } from '@/config/labels-annotations';
+import { isReady } from '@/models/harvester/harvesterhci.io.virtualmachineimage';
 
 export default {
   components: {
@@ -103,18 +104,7 @@ export default {
 
         this.userDataOptions = userDataOptions;
         this.networkDataOptions = networkDataOptions;
-
-        this.imageOptions = (res.images.value?.data || []).filter( (O) => {
-          return !O.spec.url.endsWith('.iso');
-        }).map( (O) => {
-          const value = O.id;
-          const label = `${ O.spec.displayName } (${ value })`;
-
-          return {
-            label,
-            value
-          };
-        });
+        this.images = res.images.value?.data;
 
         this.networkOptions = (res.networks.value?.data || []).map( (O) => {
           let value;
@@ -183,7 +173,7 @@ export default {
       isImportCluster:    false,
       userData,
       networkData,
-      imageOptions:       [],
+      images:             [],
       namespaceOptions:   [],
       networkOptions:     [],
       userDataOptions:    [],
@@ -197,7 +187,21 @@ export default {
 
     disabledEdit() {
       return this.disabled || !!(this.isEdit && this.value.id);
-    }
+    },
+
+    imageOptions() {
+      return (this.images || []).filter( (O) => {
+        return !O.spec.url.endsWith('.iso') && isReady.call(O);
+      }).map( (O) => {
+        const value = O.id;
+        const label = `${ O.spec.displayName } (${ value })`;
+
+        return {
+          label,
+          value
+        };
+      });
+    },
   },
 
   watch: {
@@ -283,7 +287,26 @@ export default {
     valuesChanged(value, type) {
       this.value[type] = base64Encode(value);
     },
-  }
+
+    onOpen() {
+      this.getVmImage();
+    },
+
+    async getVmImage() {
+      try {
+        const clusterId = get(this.credential, 'decodedData.clusterId');
+        const url = `/k8s/clusters/${ clusterId }/v1`;
+
+        if (url && this.isImportCluster) {
+          const res = await this.$store.dispatch('cluster/request', { url: `${ url }/${ HCI.IMAGE }s` });
+
+          this.images = res?.data;
+        }
+      } catch (e) {
+        this.errors = exceptionToErrorsArray(e);
+      }
+    }
+  },
 };
 </script>
 
@@ -312,6 +335,7 @@ export default {
           required
           :mode="mode"
           :disabled="disabled"
+          :placeholder="t('cluster.harvester.machinePool.cpu.placeholder')"
         />
       </div>
 
@@ -325,6 +349,7 @@ export default {
           :mode="mode"
           :disabled="disabled"
           required
+          :placeholder="t('cluster.harvester.machinePool.memory.placeholder')"
         />
       </div>
     </div>
@@ -340,6 +365,7 @@ export default {
           :mode="mode"
           :disabled="disabled"
           required
+          :placeholder="t('cluster.harvester.machinePool.disk.placeholder')"
         />
       </div>
 
@@ -353,6 +379,7 @@ export default {
           :required="true"
           :disabled="disabledEdit"
           label-key="cluster.credential.harvester.namespace"
+          :placeholder="t('cluster.harvester.machinePool.namespace.placeholder')"
         />
 
         <LabeledInput
@@ -362,6 +389,7 @@ export default {
           :required="true"
           :mode="mode"
           :disabled="disabledEdit"
+          :placeholder="t('cluster.harvester.machinePool.namespace.placeholder')"
         />
       </div>
     </div>
@@ -375,6 +403,8 @@ export default {
           :required="true"
           :disabled="disabledEdit"
           label-key="cluster.credential.harvester.image"
+          :placeholder="t('cluster.harvester.machinePool.image.placeholder')"
+          @on-open="onOpen"
         />
       </div>
 
@@ -386,6 +416,7 @@ export default {
           :required="true"
           :disabled="disabledEdit"
           label-key="cluster.credential.harvester.network"
+          :placeholder="t('cluster.harvester.machinePool.network.placeholder')"
         />
       </div>
     </div>
@@ -422,6 +453,8 @@ export default {
           :required="true"
           :mode="mode"
           :disabled="disabled"
+          :placeholder="t('cluster.harvester.machinePool.sshUser.placeholder')"
+          tooltip-key="cluster.harvester.machinePool.sshUser.toolTip"
         />
       </div>
     </div>

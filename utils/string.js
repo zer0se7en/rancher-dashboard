@@ -254,9 +254,33 @@ export function splitObjectPath(path) {
   return path.split('.');
 }
 
+export function joinObjectPath(ary) {
+  let out = '';
+
+  for ( const p of ary ) {
+    if ( p.includes('.') ) {
+      out += `."${ p }"`;
+    } else {
+      out += `.${ p }`;
+    }
+  }
+
+  if ( out.startsWith('.') ) {
+    out = out.substr(1);
+  }
+
+  return out;
+}
+
 export function shortenedImage(image) {
   return (image || '')
     .replace(/^(index\.)?docker.io\/(library\/)?/, '')
     .replace(/:latest$/, '')
     .replace(/^(.*@sha256:)([0-9a-f]{8})[0-9a-f]+$/i, '$1$2…');
+}
+
+export function isIpv4(ip) {
+  const reg = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+
+  return reg.test(ip);
 }

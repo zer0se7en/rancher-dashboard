@@ -16,6 +16,11 @@ export default {
       type:     Object,
       required: true
     },
+
+    resourceName: {
+      type:     String,
+      default: ''
+    },
   },
 
   data() {
@@ -47,6 +52,14 @@ export default {
 
       return node;
     },
+
+    used() {
+      if (this.metrics) {
+        return this.node.cpuReserved;
+      } else {
+        return 0;
+      }
+    },
   }
 };
 </script>
@@ -54,8 +67,9 @@ export default {
 <template>
   <ConsumptionGauge
     :capacity="cpuTotal"
-    :used="node.cpuReserved"
+    :used="used"
     :units="cpuUnits"
+    :resource-name="resourceName"
   >
     <template #title="{amountTemplateValues, formattedPercentage}">
       <span>

@@ -4,7 +4,7 @@ import {
 import { CATALOG as CATALOG_ANNOTATIONS, FLEET } from '@/config/labels-annotations';
 import { compare, isPrerelease, sortable } from '@/utils/version';
 import { filterBy } from '@/utils/array';
-import { CATALOG } from '@/config/types';
+import { CATALOG, MANAGEMENT, NORMAN } from '@/config/types';
 import { SHOW_PRE_RELEASE } from '@/store/prefs';
 import { set } from '@/utils/object';
 
@@ -68,7 +68,7 @@ export default class CatalogApp extends SteveModel {
     // object = version available to upgrade to
 
     if ( this.spec?.chart?.metadata?.annotations?.[FLEET.BUNDLE_ID] ) {
-      // Things managed by fleet shouldn't show ugrade available even if there might be.
+      // Things managed by fleet shouldn't show upgrade available even if there might be.
       return false;
     }
 
@@ -202,12 +202,64 @@ export default class CatalogApp extends SteveModel {
     }
   }
 
+  get relatedResourcesToRemove() {
+    return async() => {
+      const crd = this.spec.chart.metadata.annotations[CATALOG_ANNOTATIONS.AUTO_INSTALL].replace('=match', '');
+
+      return await this.$dispatch('find', {
+        type: CATALOG.APP,
+        id:   `${ this.metadata.namespace }/${ crd }`
+      });
+    };
+  }
+
   get canDelete() {
     return this.hasAction('uninstall');
   }
 
   get deployedResources() {
     return filterBy(this.metadata?.relationships || [], 'rel', 'helmresource');
+  }
+
+  get deployedAsMultiCluster() {
+    return async() => {
+      try {
+        const mcapps = await this.$dispatch('management/findAll', { type: MANAGEMENT.MULTI_CLUSTER_APP }, { root: true })
+          .catch(() => {
+            throw new Error("You don't have permission to list multi-cluster apps");
+          });
+
+        if (mcapps) {
+          return mcapps.find(mcapp => mcapp.spec?.targets?.find(target => target.appName === this.metadata?.name));
+        }
+      } catch (e) {}
+
+      return false;
+    };
+  }
+
+  get deployedAsLegacy() {
+    return async() => {
+      if (this.spec?.values?.global) {
+        const { clusterName, projectName } = this.spec.values.global;
+
+        if (clusterName && projectName) {
+          try {
+            const legacyApp = await this.$dispatch('rancher/find', {
+              type: NORMAN.APP,
+              id:   `${ projectName }:${ this.metadata?.name }`,
+              opt:  { url: `/v3/project/${ clusterName }:${ projectName }/apps/${ projectName }:${ this.metadata?.name }` }
+            }, { root: true });
+
+            if (legacyApp) {
+              return legacyApp;
+            }
+          } catch (e) {}
+        }
+      }
+
+      return false;
+    };
   }
 }
 

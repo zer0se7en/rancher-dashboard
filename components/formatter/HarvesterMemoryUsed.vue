@@ -17,6 +17,11 @@ export default {
       type:     Object,
       required: true
     },
+
+    resourceName: {
+      type:     String,
+      default: ''
+    },
   },
 
   data() {
@@ -50,10 +55,20 @@ export default {
 
       return node;
     },
+
+    used() {
+      if (this.metrics) {
+        return this.node.memoryReserved;
+      } else {
+        return 0;
+      }
+    },
   },
 
   methods: {
-    memoryFormatter(value, exponent) {
+    memoryFormatter(value) {
+      const exponent = exponentNeeded(this.memoryTotal, 1024);
+
       const formatOptions = {
         addSuffix:   false,
         increment:   1024,
@@ -69,9 +84,10 @@ export default {
 <template>
   <ConsumptionGauge
     :capacity="memoryTotal"
-    :used="node.memoryReserved"
+    :used="used"
     :units="memoryUnits"
     :number-formatter="memoryFormatter"
+    :resource-name="resourceName"
   >
     <template #title="{amountTemplateValues, formattedPercentage}">
       <span>

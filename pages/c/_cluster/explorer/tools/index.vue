@@ -10,14 +10,15 @@ import AppSummaryGraph from '@/components/formatter/AppSummaryGraph';
 import { sortBy } from '@/utils/sort';
 import { LEGACY } from '@/store/features';
 import { isAlternate } from '@/utils/platform';
+import IconMessage from '@/components/IconMessage';
 
 export default {
   components: {
-    AppSummaryGraph, LazyImage, Loading
+    AppSummaryGraph, LazyImage, Loading, IconMessage
   },
 
   async fetch() {
-    await this.$store.dispatch('catalog/load');
+    await this.$store.dispatch('catalog/load', { force: true, reset: true });
 
     const query = this.$route.query;
     const projects = await this.$store.dispatch('management/findAll', { type: MANAGEMENT.PROJECT });
@@ -116,7 +117,7 @@ export default {
         clusterProvider,
         showDeprecated: this.showDeprecated,
         showHidden:     this.showHidden,
-        showRepos:      [this.rancherCatalog._key],
+        showRepos:      [this.rancherCatalog?._key],
         showTypes:      [CATALOG_ANNOTATIONS._CLUSTER_TOOL],
       });
 
@@ -179,7 +180,7 @@ export default {
         chartName:        `v1-${ id }`,
         key:              `v1-${ id }`,
         versions:         this.getLegacyVersions(`rancher-${ id }`),
-        repoKey:          this.rancherCatalog._key,
+        repoKey:          this.rancherCatalog?._key,
         legacy:           true,
         legacyPage:       id,
         iconName:         `icon-${ id }`,
@@ -211,7 +212,7 @@ export default {
         name:   'c-cluster-explorer-tools-pages-page',
         params: {
           cluster: cluster.id,
-          prodct:  'explorer',
+          product: 'explorer',
           page:    id,
         }
       };
@@ -239,11 +240,25 @@ export default {
 
         v1.app = v1App;
 
+        // Add in the upgrade version information for a legacy v1 app
+        if (v1.app) {
+          v1.app.upgradeAvailable = undefined;
+          // Check if an upgrade is available
+          if (v1.chart.versions?.length) {
+            const latest = v1.chart.versions[0]?.version;
+
+            if (v1.app.currentVersion !== latest) {
+              v1.app.upgradeAvailable = latest;
+            }
+          }
+        }
+
         if (v2) {
-          if (v2.app) {
+          if (v1.app) {
+            v2.app = undefined;
+            v2.blocked = true;
+          } else if (v2.app) {
             v1.blocked = true;
-          } else {
-            v2.blocked = !!v1App;
           }
         }
       }
@@ -371,6 +386,10 @@ export default {
       .action {
         grid-area: action;
         white-space: nowrap;
+
+        button {
+          height: 30px;
+        }
       }
     }
   }
@@ -378,10 +397,10 @@ export default {
 
 <template>
   <Loading v-if="$fetchState.pending" />
-  <div v-else>
+  <div v-else-if="options.length">
     <h1 v-html="t('catalog.tools.header')" />
 
-    <div v-if="options.length" class="grid">
+    <div class="grid">
       <div
         v-for="opt in options"
         :key="opt.chart.id"
@@ -396,7 +415,7 @@ export default {
             {{ opt.chart.chartNameDisplay }}
           </h3>
           <div class="version">
-            <template v-if="opt.app && opt.app.upgradeAvailable && !opt.chart.legacy">
+            <template v-if="opt.app && opt.app.upgradeAvailable">
               v{{ opt.app.currentVersion }} <b><i class="icon icon-chevron-right" /> v{{ opt.app.upgradeAvailable }}</b>
             </template>
             <template v-else-if="opt.app">
@@ -441,5 +460,8 @@ export default {
         </div>
       </div>
     </div>
+  </div>
+  <div v-else>
+    <IconMessage icon="icon-warning" message-key="catalog.tools.noTools" />
   </div>
 </template>

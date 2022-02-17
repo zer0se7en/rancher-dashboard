@@ -20,6 +20,11 @@ const credentialOptions = {
     publicMode: 'full',
     keys:       ['subscriptionId', 'tenantId', 'clientId', 'clientSecret']
   },
+  linode: {
+    publicKey:  'token',
+    publicMode: 'prefix',
+    keys:       'token'
+  }
 };
 
 // Credential drivers that rke1 supports
@@ -101,7 +106,7 @@ const driverToCloudProviderMap = {
   harvester:     'harvester',
 };
 
-// Dynamically loaded drivers can call this eventually to register thier options
+// Dynamically loaded drivers can call this eventually to register their options
 export function configureCredential(name, opt) {
   credentialOptions[name] = opt;
 }

@@ -1,8 +1,10 @@
-import { CATALOG } from '@/config/labels-annotations';
+import Vue from 'vue';
+import { CATALOG, CLUSTER_BADGE } from '@/config/labels-annotations';
 import { NODE, FLEET, MANAGEMENT } from '@/config/types';
 import { insertAt } from '@/utils/array';
 import { downloadFile } from '@/utils/download';
 import { parseSi } from '@/utils/units';
+import { parseColor, textColor } from '@/utils/color';
 import jsyaml from 'js-yaml';
 import { eachLimit } from '@/utils/promise';
 import { addParams } from '@/utils/url';
@@ -41,7 +43,7 @@ export default class MgmtCluster extends HybridModel {
 
     insertAt(out, 0, {
       action:     'openShell',
-      label:      'Kubectl Shell',
+      label:      this.t('nav.shell'),
       icon:       'icon icon-terminal',
       enabled:    !!this.links.shell,
     });
@@ -49,10 +51,18 @@ export default class MgmtCluster extends HybridModel {
     insertAt(out, 1, {
       action:     'downloadKubeConfig',
       bulkAction: 'downloadKubeConfigBulk',
-      label:      'Download KubeConfig',
+      label:      this.t('nav.kubeconfig.download'),
       icon:       'icon icon-download',
       bulkable:   true,
-      enabled:    this.$rootGetters['isRancher'],
+      enabled:    this.$rootGetters['isRancher'] && this.hasAction('generateKubeconfig'),
+    });
+
+    insertAt(out, 2, {
+      action:     'copyKubeConfig',
+      label:      this.t('cluster.copyConfig'),
+      bulkable:   false,
+      enabled:    true,
+      icon:       'icon icon-copy',
     });
 
     return out;
@@ -218,6 +228,25 @@ export default class MgmtCluster extends HybridModel {
     return this.providerLogo;
   }
 
+  // Custom badge to show for the Cluster (if the appropriate annotations are set)
+  get badge() {
+    const text = this.metadata?.annotations?.[CLUSTER_BADGE.TEXT];
+
+    if (!text) {
+      return undefined;
+    }
+
+    const color = this.metadata?.annotations[CLUSTER_BADGE.COLOR] || '#7f7f7f';
+    const iconText = this.metadata?.annotations[CLUSTER_BADGE.ICON_TEXT] || '';
+
+    return {
+      text,
+      color,
+      textColor: textColor(parseColor(color)),
+      iconText:  iconText.substr(0, 2),
+    };
+  }
+
   get scope() {
     return this.isLocal ? CATALOG._MANAGEMENT : CATALOG._DOWNSTREAM;
   }
@@ -307,6 +336,12 @@ export default class MgmtCluster extends HybridModel {
     const out = jsyaml.dump(obj);
 
     downloadFile('kubeconfig.yaml', out, 'application/yaml');
+  }
+
+  async copyKubeConfig() {
+    const config = await this.generateKubeConfig();
+
+    Vue.prototype.$copyText(config);
   }
 
   async fetchNodeMetrics() {

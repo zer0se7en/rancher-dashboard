@@ -25,6 +25,7 @@ import {
   WORKLOAD_TYPES,
   COUNT,
   CATALOG,
+  POD,
 } from '@/config/types';
 import { findBy } from '@/utils/array';
 import { mapPref, CLUSTER_TOOLS_TIP } from '@/store/prefs';
@@ -79,9 +80,9 @@ export default {
       hash.rke1NodePools = this.$store.dispatch('management/findAll', { type: MANAGEMENT.NODE_POOL });
     }
 
-    this.showClusterMetrics = await allDashboardsExist(this.$store.dispatch, this.currentCluster.id, [CLUSTER_METRICS_DETAIL_URL, CLUSTER_METRICS_SUMMARY_URL]);
-    this.showK8sMetrics = await allDashboardsExist(this.$store.dispatch, this.currentCluster.id, [K8S_METRICS_DETAIL_URL, K8S_METRICS_SUMMARY_URL]);
-    this.showEtcdMetrics = this.isRKE && await allDashboardsExist(this.$store.dispatch, this.currentCluster.id, [ETCD_METRICS_DETAIL_URL, ETCD_METRICS_SUMMARY_URL]);
+    this.showClusterMetrics = await allDashboardsExist(this.$store, this.currentCluster.id, [CLUSTER_METRICS_DETAIL_URL, CLUSTER_METRICS_SUMMARY_URL]);
+    this.showK8sMetrics = await allDashboardsExist(this.$store, this.currentCluster.id, [K8S_METRICS_DETAIL_URL, K8S_METRICS_SUMMARY_URL]);
+    this.showEtcdMetrics = this.isRKE && await allDashboardsExist(this.$store, this.currentCluster.id, [ETCD_METRICS_DETAIL_URL, ETCD_METRICS_SUMMARY_URL]);
 
     const res = await allHash(hash);
 
@@ -219,9 +220,11 @@ export default {
     },
 
     podsUsed() {
+      const pods = resourceCounts(this.$store, POD);
+
       return {
         total:  parseSi(this.currentCluster?.status?.allocatable?.pods || '0'),
-        useful: parseSi(this.currentCluster?.status?.requested?.pods || '0')
+        useful: pods.total
       };
     },
 
@@ -386,30 +389,34 @@ export default {
       <EmberPage inline="ember-anchor" :src="v1MonitoringURL" />
     </div>
 
-    <div class="mb-40 mt-40">
-      <h3>{{ hasMonitoring ?t('clusterIndexPage.sections.alerts.label') :t('clusterIndexPage.sections.events.label') }}</h3>
-      <AlertTable v-if="hasMonitoring" />
-      <SortableTable
-        v-else
-        :rows="events"
-        :headers="eventHeaders"
-        key-field="id"
-        :search="false"
-        :table-actions="false"
-        :row-actions="false"
-        :paging="true"
-        :rows-per-page="10"
-        default-sort-by="date"
-      >
-        <template #cell:resource="{row, value}">
-          <n-link :to="row.detailLocation">
-            {{ value }}
-          </n-link>
-          <div v-if="row.message">
-            {{ row.displayMessage }}
-          </div>
-        </template>
-      </SortableTable>
+    <div class="mt-30">
+      <Tabbed>
+        <Tab name="cluster-events" :label="t('clusterIndexPage.sections.events.label')" :weight="2">
+          <SortableTable
+            :rows="events"
+            :headers="eventHeaders"
+            key-field="id"
+            :search="false"
+            :table-actions="false"
+            :row-actions="false"
+            :paging="true"
+            :rows-per-page="10"
+            default-sort-by="date"
+          >
+            <template #cell:resource="{row, value}">
+              <n-link :to="row.detailLocation">
+                {{ value }}
+              </n-link>
+              <div v-if="row.message">
+                {{ row.displayMessage }}
+              </div>
+            </template>
+          </SortableTable>
+        </Tab>
+        <Tab v-if="hasMonitoring" name="cluster-alerts" :label="t('clusterIndexPage.sections.alerts.label')" :weight="1">
+          <AlertTable />
+        </Tab>
+      </Tabbed>
     </div>
     <Tabbed v-if="hasMetricsTabs" class="mt-30">
       <Tab v-if="showClusterMetrics" name="cluster-metrics" :label="t('clusterIndexPage.sections.clusterMetrics.label')" :weight="2">
