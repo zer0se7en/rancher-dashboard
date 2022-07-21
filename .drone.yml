@@ -15,7 +15,7 @@ platform:
 steps:
 - name: test
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - scripts/ci
 
@@ -41,7 +41,7 @@ platform:
 steps:
 - name: gate
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-upload-gate
 
@@ -103,13 +103,13 @@ platform:
 steps:
 - name: build
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-hosted
 
 - name: upload-gate
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-upload-gate
 
@@ -146,7 +146,7 @@ platform:
 steps:
 - name: build
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-hosted
 
@@ -180,7 +180,7 @@ platform:
 steps:
 - name: build
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-hosted
 
@@ -196,6 +196,17 @@ steps:
     token:
       from_secret: google_auth_key
 
+- name: create-pr-in-rancher
+  image: curlimages/curl:7.81.0
+  user: root
+  environment:
+    PAT_USERNAME:
+      from_secret: pat_username
+    PAT_TOKEN:
+      from_secret: github_token
+  commands:
+  - apk -U --no-cache add bash
+  - scripts/create-pr-in-rancher
 ---
 kind: pipeline
 name: embedded-master
@@ -216,13 +227,13 @@ platform:
 steps:
 - name: build
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-embedded
 
 - name: upload-gate
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-upload-gate
 
@@ -259,7 +270,7 @@ platform:
 steps:
 - name: build
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-embedded
 
@@ -293,7 +304,7 @@ platform:
 steps:
 - name: build
   pull: default
-  image: node:12
+  image: node:14
   commands:
   - ./scripts/build-embedded
 
@@ -308,3 +319,19 @@ steps:
     target: releases.rancher.com/dashboard/${DRONE_TAG}.tar.gz
     token:
       from_secret: google_auth_key
+
+---
+
+kind: pipeline
+name: fossa
+
+steps:
+- name: fossa
+  image: rancher/drone-fossa:latest
+  settings:
+    api_key:
+      from_secret: FOSSA_API_KEY
+  when:
+    instance:
+      - drone-publish.rancher.io
+
