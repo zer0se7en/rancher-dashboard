@@ -2165,9 +2165,12 @@ ingress:
     port:
       label: Port
       placeholder: e.g. 80 or http
+      notInt: Port must be an integer
+      required: Port is required
     targetService:
       label: Target Service
       doesntExist: The selected service does not exist
+      required: Target Service is required
     warning: "Warning: Default backend is used globally for the entire cluster."
   ingressClass:
     label: Ingress Class
@@ -2200,6 +2203,7 @@ ingress:
     defaultCertificate: default
   target:
     default: Default
+  rulesOrBackendSpecified: Either Default Backend or Rules must be specified
 
 internalExternalIP:
   none: None
@@ -3628,7 +3632,7 @@ prefs:
     emacs: 'Emacs'
     vim: 'Vim'
   advanced: Advanced
-  advancedTooltip: Enables 'View in API' option and keyboard shortcut to toggle light or dark theme (shift+t)
+  advancedTooltip: Enables 'View in API' option and keyboard shortcut to toggle light or dark theme (shift+t). This setting also reveals namespaces that are managed by Rancher and are not meant to be manually edited or deleted.
   dev:
     label: Enable Developer Tools & Features
   hideDesc:
@@ -4891,6 +4895,8 @@ validation:
       tooLong: '"{key}" cannot be longer than {max} characters'
       tooLongLabel: '"{key}" cannot contain a section longer than {max} characters'
     label:
+      endDot: '"{key}" cannot end with a dot'
+      startDot: '"{key}" cannot start with a dot'
       emptyLabel: '"{key}" cannot be empty'
       endHyphen: '"{key}" cannot end with a hyphen'
       startHyphen: '"{key}" cannot start with a hyphen'
@@ -4915,6 +4921,7 @@ validation:
   noSchema: No schema found to validate
   noType: No type to validate
   number:
+    requiredInt: '"{key}" must be integer'
     between: '"{key}" should be between {min} and {max}'
     exactly: '"{key}" should be exactly {val}'
     max: '"{key}" should be at most {val}'
@@ -4930,7 +4937,9 @@ validation:
       valueMustBeEmpty: Rule [{index}] of {group} {rules} - value must be empty if operator is 'Exists' or 'DoesNotExist'
       valuesMustBeDefined: Rule [{index}] of {group} {rules} - value must be defined if operator is 'In' or 'NotIn'
   port: A port must be a number between 1 and 65535.
+  path: '"{key}" must be an absolute path'
   prometheusRule:
+    noEdit: This Prometheus Rule may not be edited due to invalid characters in name.
     groups:
       required: At least one rule group is required.
       singleAlert: A rule may contain alert rules or recording rules but not both.
@@ -4959,9 +4968,11 @@ validation:
         required: 'Port Rule [{position}] - Name is required.'
       nodePort:
         requiredInt: 'Port Rule [{position}] - Node Port must be integer values if included.'
+        between: 'Port Rule [{position}] - Node Port must be between 1 and 65535'
       port:
         required: 'Port Rule [{position}] - Port is required.'
         requiredInt: 'Port Rule [{position}] - Port must be integer values if included.'
+        between: 'Port Rule [{position}] - Port must be between 1 and 65535'
       targetPort:
         between: 'Port Rule [{position}] - Target Port must be between 1 and 65535'
         iana: 'Port Rule [{position}] - Target Port must be an IANA Service Name or Integer'
@@ -5072,7 +5083,7 @@ workload:
       livenessProbe: Liveness Check
       livenessTip: Containers will be restarted when this check is failing.  Not recommended for most uses.
       noHealthCheck: "There is not a Readiness Check, Liveness Check or Startup Check configured."
-      readinessProbe: Readiness Check
+      readinessProbe: Readiness Checks
       readinessTip: Containers will be removed from service endpoints when this check is failing.  Recommended.
       startupProbe: Startup Check
       startupTip: Containers will wait until this check succeeds before attempting other health checks.
@@ -5147,6 +5158,7 @@ workload:
       protocol: Protocol
       listeningPort: Listening Port
     removeContainer: Remove Container
+    addContainer: Add Container
     security:
       addCapabilities: Add Capabilities
       addGroupIDs: Add Group IDs
@@ -5183,6 +5195,7 @@ workload:
     standard: Standard Container
     terminationState: "Last state: Terminated with {lsExitCode}: {lsDescription}, started: {lsStartedAt}, finished: {lsFinishedAt}"
     titles:
+      pods: Pods
       container: Container
       command: Command
       containers: Containers
@@ -5493,7 +5506,11 @@ workload:
       label: Termination Grace Period
       tip: The duration the pod needs to terminate successfully.
     title: Upgrading
-
+  tabs: 
+    labels: 
+      deployment: Deployment
+      pod: Pod
+      containers: Containers
 harvester:
   modal:
     backup:
