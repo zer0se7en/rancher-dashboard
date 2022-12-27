@@ -6,7 +6,6 @@ import ButtonGroup from '@shell/components/ButtonGroup';
 import SortableTable from '@shell/components/SortableTable';
 import { NAMESPACE } from '@shell/config/table-headers';
 import { findBy } from '@shell/utils/array';
-import { NAME as HARVESTER } from '@shell/config/product/harvester';
 
 // Default group-by in the case the group stored in the preference does not apply
 const DEFAULT_GROUP = 'namespace';
@@ -17,11 +16,19 @@ export const defaultTableSortGenerationFn = (schema, $store) => {
   }
 
   const resource = schema.id;
+  let sortKey = resource;
+
   const inStore = $store.getters['currentStore'](resource);
   const generation = $store.getters[`${ inStore }/currentGeneration`]?.(resource);
 
   if ( generation ) {
-    return `${ resource }/${ generation }`;
+    sortKey += `/${ generation }`;
+  }
+
+  const nsFilterKey = $store.getters['activeNamespaceCacheKey'];
+
+  if ( nsFilterKey ) {
+    return `${ sortKey }/${ nsFilterKey }`;
   }
 };
 
@@ -109,6 +116,37 @@ export default {
     getCustomDetailLink: {
       type:    Function,
       default: null
+    },
+
+    ignoreFilter: {
+      type:    Boolean,
+      default: false
+    },
+    hasAdvancedFiltering: {
+      type:    Boolean,
+      default: false
+    },
+    advFilterHideLabelsAsCols: {
+      type:    Boolean,
+      default: false
+    },
+    advFilterPreventFilteringLabels: {
+      type:    Boolean,
+      default: false
+    },
+    /**
+     * Allows for the usage of a query param to work for simple filtering (q)
+     */
+    useQueryParamsForSimpleFiltering: {
+      type:    Boolean,
+      default: false
+    },
+    /**
+     * Manaul force the update of live and delayed cells. Change this number to kick off the update
+     */
+    forceUpdateLiveAndDelayed: {
+      type:    Number,
+      default: 0
     }
   },
 
@@ -125,7 +163,7 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['isVirtualCluster']),
+    ...mapGetters(['currentProduct']),
     isNamespaced() {
       if ( this.namespaced !== null ) {
         return this.namespaced;
@@ -188,24 +226,28 @@ export default {
 
     filteredRows() {
       const isAll = this.$store.getters['isAllNamespaces'];
-      const isVirtualProduct = this.$store.getters['currentProduct'].name === HARVESTER;
 
       // If the resources isn't namespaced or we want ALL of them, there's nothing to do.
-      if ( (!this.isNamespaced || isAll) && !isVirtualProduct) {
+      if ( !this.isNamespaced || (isAll && !this.currentProduct?.hideSystemResources) || this.ignoreFilter) {
         return this.rows || [];
       }
 
-      const includedNamespaces = this.$store.getters['activeNamespaceCache']();
+      const includedNamespaces = this.$store.getters['namespaces']();
 
       // Shouldn't happen, but does for resources like management.cattle.io.preference
       if (!this.rows) {
         return [];
       }
 
+      const haveAllNamespace = this.$store.getters['haveAllNamespace'];
+
       return this.rows.filter((row) => {
-        if (this.isVirtualCluster && this.isNamespaced) {
+        if (this.currentProduct?.hideSystemResources && this.isNamespaced) {
           return !!includedNamespaces[row.metadata.namespace] && !row.isSystemResource;
         } else if (!this.isNamespaced) {
+          return true;
+        } else if (haveAllNamespace) {
+          // `rows` only contains resource from a single namespace
           return true;
         } else {
           return !!includedNamespaces[row.metadata.namespace];
@@ -346,6 +388,7 @@ export default {
     handleActionButtonClick(event) {
       this.$emit('clickedActionButton', event);
     }
+
   }
 };
 </script>
@@ -358,6 +401,8 @@ export default {
     :rows="filteredRows"
     :loading="loading"
     :group-by="computedGroupBy"
+    :group="group"
+    :group-options="groupOptions"
     :search="search"
     :paging="true"
     :paging-params="pagingParams"
@@ -367,35 +412,81 @@ export default {
     :overflow-x="overflowX"
     :overflow-y="overflowY"
     :get-custom-detail-link="getCustomDetailLink"
+    :has-advanced-filtering="hasAdvancedFiltering"
+    :adv-filter-hide-labels-as-cols="advFilterHideLabelsAsCols"
+    :adv-filter-prevent-filtering-labels="advFilterPreventFilteringLabels"
     key-field="_key"
     :sort-generation-fn="safeSortGenerationFn"
+    :use-query-params-for-simple-filtering="useQueryParamsForSimpleFiltering"
+    :force-update-live-and-delayed="forceUpdateLiveAndDelayed"
     @clickedActionButton="handleActionButtonClick"
+    @group-value-change="group = $event"
     v-on="$listeners"
   >
-    <template v-if="showGrouping" #header-middle>
+    <template
+      v-if="showGrouping"
+      #header-middle
+    >
       <slot name="more-header-middle" />
-      <ButtonGroup v-model="group" :options="groupOptions" />
+      <ButtonGroup
+        v-model="group"
+        :options="groupOptions"
+      />
     </template>
 
-    <template v-if="showGrouping" #header-right>
+    <template
+      v-if="showGrouping"
+      #header-right
+    >
       <slot name="header-right" />
     </template>
 
     <template #group-by="{group: thisGroup}">
-      <div class="group-tab" v-html="thisGroup.ref" />
+      <div
+        class="group-tab"
+        v-html="thisGroup.ref"
+      />
     </template>
 
     <!-- Pass down templates provided by the caller -->
-    <template v-for="(_, slot) of $scopedSlots" v-slot:[slot]="scope">
-      <slot :name="slot" v-bind="scope" />
+    <template
+      v-for="(_, slot) of $scopedSlots"
+      v-slot:[slot]="scope"
+    >
+      <slot
+        :name="slot"
+        v-bind="scope"
+      />
     </template>
 
     <template #shortkeys>
-      <button v-shortkey.once="['enter']" class="hide detail" @shortkey="keyAction('detail')" />
-      <button v-shortkey.once="['e']" class="hide" @shortkey="keyAction('edit')" />
-      <button v-shortkey.once="['y']" class="hide" @shortkey="keyAction('yaml')" />
-      <button v-if="_showBulkActions" v-shortkey.once="['del']" class="hide" @shortkey="keyAction('remove')" />
-      <button v-if="_showBulkActions" v-shortkey.once="['backspace']" class="hide" @shortkey="keyAction('remove')" />
+      <button
+        v-shortkey.once="['enter']"
+        class="hide detail"
+        @shortkey="keyAction('detail')"
+      />
+      <button
+        v-shortkey.once="['e']"
+        class="hide"
+        @shortkey="keyAction('edit')"
+      />
+      <button
+        v-shortkey.once="['y']"
+        class="hide"
+        @shortkey="keyAction('yaml')"
+      />
+      <button
+        v-if="_showBulkActions"
+        v-shortkey.once="['del']"
+        class="hide"
+        @shortkey="keyAction('remove')"
+      />
+      <button
+        v-if="_showBulkActions"
+        v-shortkey.once="['backspace']"
+        class="hide"
+        @shortkey="keyAction('remove')"
+      />
     </template>
   </SortableTable>
 </template>

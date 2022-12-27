@@ -3,17 +3,20 @@ import { addObject, addObjects, clear, removeObject } from '@shell/utils/array';
 import { SCHEMA } from '@shell/config/types';
 import { normalizeType } from '@shell/plugins/dashboard-store/normalize';
 import { classify } from '@shell/plugins/dashboard-store/classify';
+import garbageCollect from '@shell/utils/gc/gc';
 
 function registerType(state, type) {
   let cache = state.types[type];
 
   if ( !cache ) {
     cache = {
-      list:         [],
-      haveAll:      false,
-      haveSelector: {},
-      revision:     0, // The highest known resourceVersion from the server for this type
-      generation:   0, // Updated every time something is loaded for this type
+      list:          [],
+      haveAll:       false,
+      haveSelector:  {},
+      haveNamespace: undefined, // If the cached list only contains resources for a namespace, this will contain the ns name
+      revision:      0, // The highest known resourceVersion from the server for this type
+      generation:    0, // Updated every time something is loaded for this type
+      loadCounter:   0, // Used to cancel incremental loads if the page changes during load
     };
 
     // Not enumerable so they don't get sent back to the client for SSR
@@ -113,11 +116,14 @@ export function forgetType(state, type) {
   if ( cache ) {
     cache.haveAll = false;
     cache.haveSelector = {};
+    cache.haveNamespace = undefined;
     cache.revision = 0;
     cache.generation = 0;
     clear(cache.list);
     cache.map.clear();
     delete state.types[type];
+
+    garbageCollect.gcResetType(state, type);
 
     return true;
   }
@@ -130,32 +136,42 @@ export function resetStore(state, commit) {
   for ( const type of Object.keys(state.types) ) {
     commit(`${ state.config.namespace }/forgetType`, type);
   }
+
+  garbageCollect.gcResetStore(state);
 }
 
 export function remove(state, obj, getters) {
-  let type = normalizeType(obj.type);
-  const keyField = getters[`${ state.config.namespace }/keyFieldForType`](type);
-  const id = obj[keyField];
+  if (obj) {
+    let type = normalizeType(obj.type);
+    const keyField = getters[`${ state.config.namespace }/keyFieldForType`](type);
+    const id = obj[keyField];
 
-  let entry = state.types[type];
-
-  if ( entry ) {
-    removeObject(entry.list, obj);
-    entry.map.delete(id);
-  }
-
-  if ( obj.baseType ) {
-    type = normalizeType(obj.baseType);
-    entry = state.types[type];
+    let entry = state.types[type];
 
     if ( entry ) {
       removeObject(entry.list, obj);
       entry.map.delete(id);
     }
+
+    if ( obj.baseType ) {
+      type = normalizeType(obj.baseType);
+      entry = state.types[type];
+
+      if ( entry ) {
+        removeObject(entry.list, obj);
+        entry.map.delete(id);
+      }
+    }
   }
 }
 
-export function loadAll(state, { type, data, ctx }) {
+export function loadAll(state, {
+  type,
+  data,
+  ctx,
+  skipHaveAll,
+  namespace
+}) {
   const { getters } = ctx;
 
   if (!data) {
@@ -184,7 +200,11 @@ export function loadAll(state, { type, data, ctx }) {
     cache.map.set(proxies[i][keyField], proxies[i]);
   }
 
-  cache.haveAll = true;
+  // Allow requester to skip setting that everything has loaded
+  if (!skipHaveAll) {
+    cache.haveNamespace = namespace;
+    cache.haveAll = !namespace;
+  }
 
   return proxies;
 }
@@ -243,12 +263,39 @@ export default {
     });
   },
 
+  // Add a set of resources to the store for a given type
+  // Don't mark the 'haveAll' field - this is used for incremental loading
+  loadAdd(state, { type, data: allLatest, ctx }) {
+    const { getters } = ctx;
+    const keyField = getters.keyFieldForType(type);
+
+    allLatest.forEach((entry) => {
+      const existing = state.types[type].map.get(entry[keyField]);
+
+      load(state, {
+        data: entry, ctx, existing
+      });
+    });
+  },
+
   forgetAll(state, { type }) {
     const cache = registerType(state, type);
 
     clear(cache.list);
     cache.map.clear();
     cache.generation++;
+  },
+
+  setHaveAll(state, { type }) {
+    const cache = registerType(state, type);
+
+    cache.haveAll = true;
+  },
+
+  setHaveNamespace(state, { type, namespace }) {
+    const cache = registerType(state, type);
+
+    cache.haveNamespace = namespace;
   },
 
   loadedAll(state, { type }) {
@@ -259,7 +306,9 @@ export default {
   },
 
   remove(state, obj) {
-    remove(state, obj, this.getters);
+    if (obj) {
+      remove(state, obj, this.getters);
+    }
   },
 
   reset(state) {
@@ -267,4 +316,13 @@ export default {
   },
 
   forgetType,
+
+  incrementLoadCounter(state, type) {
+    const typeData = state.types[type];
+
+    if (typeData) {
+      typeData.loadCounter++;
+    }
+  },
+
 };

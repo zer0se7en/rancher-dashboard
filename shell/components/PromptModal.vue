@@ -1,7 +1,6 @@
 <script>
 import { mapState } from 'vuex';
 import { isArray } from '@shell/utils/array';
-import { importDialog } from '@shell/utils/dynamic-importer';
 
 /**
  * @name PromptModal
@@ -14,7 +13,7 @@ export default {
     return { opened: false, backgroundClosing: null };
   },
 
-  computed:   {
+  computed: {
     ...mapState('action-menu', ['showModal', 'modalData']),
 
     resources() {
@@ -32,12 +31,17 @@ export default {
       return this.modalData?.modalWidth || '600px';
     },
     component() {
-      // Looks for a dialog component by looking up @shell/components/dialog/${name}.
-      return importDialog(this.modalData?.component);
+      // Looks for a dialog component by looking up in plugins and @shell/dialog/${name}.
+      return this.$store.getters['type-map/importDialog'](this.modalData?.component);
     },
     cssProps() {
       // this computed property lets us generate a scss var that we can use in the style
       return `--prompt-modal-width: ${ this.modalWidth }`;
+    },
+    stickyProps() {
+      const isSticky = !!this.modalData?.modalSticky;
+
+      return !isSticky ? '' : 'display: flex; flex-direction: column; ';
     }
   },
 
@@ -78,12 +82,19 @@ export default {
   <modal
     class="promptModal-modal"
     name="promptModal"
-    :styles="`background-color: var(--nav-bg); border-radius: var(--border-radius); max-height: 95vh; ${cssProps}`"
+    :styles="`background-color: var(--nav-bg); border-radius: var(--border-radius); ${stickyProps} max-height: 95vh; ${cssProps}`"
     height="auto"
     :scrollable="true"
     @closed="close()"
   >
-    <component :is="component" v-if="opened && component" :resources="resources" :register-background-closing="registerBackgroundClosing" @close="close()" />
+    <component
+      v-bind="modalData.componentProps || {}"
+      :is="component"
+      v-if="opened && component"
+      :resources="resources"
+      :register-background-closing="registerBackgroundClosing"
+      @close="close()"
+    />
   </modal>
 </template>
 

@@ -11,6 +11,11 @@ import Auth from '../auth';
 
 export const MS_TEAMS_URL = 'http://rancher-alerting-drivers-prom2teams.cattle-monitoring-system.svc:8089/v2/connector';
 export const ALIBABA_CLOUD_SMS_URL = 'http://rancher-alerting-drivers-sachet.cattle-monitoring-system.svc:9876/alert';
+export const WEBHOOK_TYPES = {
+  ALIBABA_CLOUD_SMS: 'alibaba-cloud-sms',
+  GENERIC:           'generic',
+  MS_TEAMS:          'ms-teams'
+};
 
 export default {
   components: {
@@ -22,7 +27,7 @@ export default {
     SimpleSecretSelector,
     TLS,
   },
-  props:      {
+  props: {
     mode: {
       type:     String,
       required: true,
@@ -32,8 +37,8 @@ export default {
       required: true
     },
     namespace: {
-      type:     String,
-      default:  ''
+      type:    String,
+      default: ''
     }
   },
   data(props) {
@@ -45,29 +50,39 @@ export default {
     return {
       showNamespaceBanner:  isDriverUrl && this.mode !== _VIEW,
       view:                 _VIEW,
-      initialUrlSecretName:  this.value?.urlSecret?.name ? this.value.urlSecret.name : '',
+      initialUrlSecretName: this.value?.urlSecret?.name ? this.value.urlSecret.name : '',
       initialUrlSecretKey:  this.value?.urlSecret?.key ? this.value.urlSecret.key : '',
       webhookOptons:        [
         {
           label: this.t('monitoringReceiver.webhook.add.generic'),
-          value: 'generic'
+          value: WEBHOOK_TYPES.GENERIC
         },
         {
           label: this.t('monitoringReceiver.webhook.add.msTeams'),
-          value: 'ms-teams'
+          value: WEBHOOK_TYPES.MS_TEAMS
         },
         {
           label: this.t('monitoringReceiver.webhook.add.alibabaCloudSms'),
-          value: 'alibaba-cloud-sms'
+          value: WEBHOOK_TYPES.ALIBABA_CLOUD_SMS
         }
       ],
       msTeamsUrl:          MS_TEAMS_URL,
       alibabaCloudSmsUrl:  ALIBABA_CLOUD_SMS_URL,
-      selectedWebhookType: 'generic',
+      selectedWebhookType: this.getTypeFromUrl(this.value.url),
       none:                '__[[NONE]]__',
     };
   },
   methods: {
+    getTypeFromUrl(url) {
+      switch (url) {
+      case MS_TEAMS_URL:
+        return WEBHOOK_TYPES.MS_TEAMS;
+      case ALIBABA_CLOUD_SMS_URL:
+        return WEBHOOK_TYPES.ALIBABA_CLOUD_SMS;
+      default:
+        return WEBHOOK_TYPES.GENERIC;
+      }
+    },
     updateUrlSecretName(name) {
       const existingKey = this.value.urlSecret?.key || '';
 
@@ -106,12 +121,15 @@ export default {
       switch (event) {
       case ('ms-teams'):
         this.value.url = this.msTeamsUrl;
+        this.selectedWebhookType = WEBHOOK_TYPES.MS_TEAMS;
         break;
       case ('alibaba-cloud-sms'):
         this.value.url = this.alibabaCloudSmsUrl;
+        this.selectedWebhookType = WEBHOOK_TYPES.ALIBABA_CLOUD_SMS;
         break;
       default:
         this.value.url = '';
+        this.selectedWebhookType = WEBHOOK_TYPES.GENERIC;
       }
     },
     updateWebhookUrl(val) {
@@ -123,7 +141,11 @@ export default {
 
 <template>
   <div>
-    <Banner v-if="mode !== view" color="info" v-html="t('monitoringReceiver.webhook.banner', {}, raw=true)" />
+    <Banner
+      v-if="mode !== view"
+      color="info"
+      v-html="t('monitoringReceiver.webhook.banner', {}, raw=true)"
+    />
     <div class="row mb-20">
       <LabeledSelect
         v-model="selectedWebhookType"
@@ -142,7 +164,11 @@ export default {
         </h3>
       </div>
     </div>
-    <Banner v-if="showNamespaceBanner" color="info" v-html="t('monitoringReceiver.webhook.modifyNamespace', {}, raw=true)" />
+    <Banner
+      v-if="showNamespaceBanner"
+      color="info"
+      v-html="t('monitoringReceiver.webhook.modifyNamespace', {}, raw=true)"
+    />
     <div class="row mb-20">
       <div class="col span-12">
         <LabeledInput
@@ -165,19 +191,40 @@ export default {
         @updateSecretName="updateUrlSecretName"
         @updateSecretKey="updateUrlSecretKey"
       />
-      <Banner v-else color="error">
+      <Banner
+        v-else
+        color="error"
+      >
         {{ t('alertmanagerConfigReceiver.namespaceWarning') }}
       </Banner>
     </div>
     <div class="row mb-20">
       <div class="col span-12">
-        <LabeledInput v-model="value.httpConfig.proxyURL" :mode="mode" :label="t('monitoringReceiver.shared.proxyUrl.label')" :placeholder="t('monitoringReceiver.shared.proxyUrl.placeholder')" />
+        <LabeledInput
+          v-model="value.httpConfig.proxyURL"
+          :mode="mode"
+          :label="t('monitoringReceiver.shared.proxyUrl.label')"
+          :placeholder="t('monitoringReceiver.shared.proxyUrl.placeholder')"
+        />
       </div>
     </div>
     <div class="row mb-20">
-      <Checkbox v-model="value.sendResolved" :mode="mode" :label="t('monitoringReceiver.shared.sendResolved.label')" />
+      <Checkbox
+        v-model="value.sendResolved"
+        :mode="mode"
+        :label="t('monitoringReceiver.shared.sendResolved.label')"
+      />
     </div>
-    <TLS v-model="value.httpConfig" class="mb-20" :mode="mode" :namespace="namespace" />
-    <Auth v-model="value.httpConfig" :mode="mode" :namespace="namespace" />
+    <TLS
+      v-model="value.httpConfig"
+      class="mb-20"
+      :mode="mode"
+      :namespace="namespace"
+    />
+    <Auth
+      v-model="value.httpConfig"
+      :mode="mode"
+      :namespace="namespace"
+    />
   </div>
 </template>

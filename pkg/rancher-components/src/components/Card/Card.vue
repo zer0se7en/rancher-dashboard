@@ -45,28 +45,48 @@ export default Vue.extend({
     showActions: {
       type:    Boolean,
       default: true
-    }
+    },
+    sticky: {
+      type:    Boolean,
+      default: false,
+    },
   }
 });
 </script>
 
 <template>
-  <div class="card-container" :class="{'highlight-border': showHighlightBorder}">
+  <div
+    class="card-container"
+    :class="{'highlight-border': showHighlightBorder, 'card-sticky': sticky}"
+  >
     <div class="card-wrap">
-      <div class="card-title">
+      <div
+        class="card-title"
+        data-testid="card-title-slot"
+      >
         <slot name="title">
           {{ title }}
         </slot>
       </div>
-      <hr />
-      <div class="card-body">
+      <hr>
+      <div
+        class="card-body"
+        data-testid="card-body-slot"
+      >
         <slot name="body">
           {{ content }}
         </slot>
       </div>
-      <div v-if="showActions" class="card-actions">
+      <div
+        v-if="showActions"
+        class="card-actions"
+        data-testid="card-actions-slot"
+      >
         <slot name="actions">
-          <button class="btn role-primary" @click="buttonAction">
+          <button
+            class="btn role-primary"
+            @click="buttonAction"
+          >
             {{ buttonText }}
           </button>
         </slot>
@@ -115,6 +135,31 @@ export default Vue.extend({
      }
     .flex-right {
       margin-left: auto;
+    }
+   }
+
+  // Sticky mode will stick header and footer to top and bottom with content in the middle scrolling
+   &.card-sticky {
+      // display: flex;
+      // flex-direction: column;
+      overflow: hidden;
+
+    .card-wrap {
+      display: flex;
+      flex-direction: column;
+
+      .card-body {
+        justify-content: flex-start;
+        overflow: scroll;
+      }
+
+      > * {
+        flex: 0;
+      }
+
+      .card-body {
+        flex: 1;
+      }
     }
    }
  }

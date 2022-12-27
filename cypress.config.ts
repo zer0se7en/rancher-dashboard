@@ -1,4 +1,5 @@
 import { defineConfig } from 'cypress';
+// Required for env vars to be available in cypress
 require('dotenv').config();
 
 /**
@@ -23,19 +24,37 @@ const getSpecPattern = (): string[] => {
 const baseUrl = (process.env.TEST_BASE_URL || 'https://localhost:8005').replace(/\/$/, '');
 
 export default defineConfig({
-  defaultCommandTimeout: 60000,
+  projectId:             process.env.TEST_PROJECT_ID,
+  defaultCommandTimeout: process.env.TEST_TIMEOUT ? +process.env.TEST_TIMEOUT : 60000,
   trashAssetsBeforeRuns: true,
-  env:                   {
+  retries:               {
+    runMode:  2,
+    openMode: 0
+  },
+  env: {
     baseUrl,
+    coverage:     false,
+    codeCoverage: {
+      exclude: [
+        'cypress/**/*.*',
+        '**/__tests__/**/*.*',
+        '**/shell/scripts/**/*.*',
+      ],
+      include: [
+        'shell/**/*.{vue,ts,js}',
+        'pkg/rancher-components/src/components/**/*.{vue,ts,js}',
+      ]
+    },
     username:          process.env.TEST_USERNAME,
     password:          process.env.TEST_PASSWORD,
     bootstrapPassword: process.env.CATTLE_BOOTSTRAP_PASSWORD,
   },
-  e2e:                   {
-    // We've imported your old cypress plugins here.
-    // You may want to clean this up later by importing these.
+  e2e: {
     setupNodeEvents(on, config) {
-      return require('./cypress/plugins/index.ts')(on, config);
+      // For more info: https://docs.cypress.io/guides/tooling/code-coverage
+      require('@cypress/code-coverage/task')(on, config);
+
+      return config;
     },
     experimentalSessionAndOrigin: true,
     specPattern:                  getSpecPattern(),

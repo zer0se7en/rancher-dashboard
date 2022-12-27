@@ -1,5 +1,4 @@
 <script>
-
 import { LabeledInput } from '@components/Form/LabeledInput';
 import { Checkbox } from '@components/Form/Checkbox';
 import { _EDIT } from '@shell/config/query-params';
@@ -32,13 +31,14 @@ export default {
     },
 
     cluster: {
-      type:     Object,
+      type:    Object,
       default: () => ({})
     },
 
+    // no credentials are required for elemental machine pools
     credentialId: {
-      type:     String,
-      required: true,
+      type:    String,
+      default: null
     },
 
     mode: {
@@ -64,11 +64,40 @@ export default {
 
   data() {
     const parseDuration = (duration) => {
-      // The back end stores the timeout in Duration format, for example, "10m".
-      // Here we convert that string to an integer.
-      const numberString = duration.split('m')[0];
+      // The back end stores the timeout in Duration format, for example, "42d31h10m30s".
+      // Here we convert that string to an integer and return the duration as seconds.
+      const splitStr = duration.split(/([a-z])/);
 
-      return parseInt(numberString, 10);
+      const durationsAsSeconds = splitStr.reduce((old, neu, idx) => {
+        const parsed = parseInt(neu);
+
+        if ( isNaN(parsed) ) {
+          return old;
+        }
+
+        const interval = splitStr[(idx + 1)];
+
+        switch (interval) {
+        case 'd':
+          old.push(parsed * 24 * 60 * 60);
+          break;
+        case 'h':
+          old.push(parsed * 60 * 60);
+          break;
+        case 'm':
+          old.push(parsed * 60);
+          break;
+        case 's':
+          old.push(parsed);
+          break;
+        default:
+          break;
+        }
+
+        return old;
+      }, []);
+
+      return durationsAsSeconds.reduce((old, neu) => old + neu);
     };
 
     return {
@@ -176,7 +205,7 @@ export default {
         />
       </div>
     </div>
-    <hr class="mt-10" />
+    <hr class="mt-10">
     <component
       :is="configComponent"
       v-if="value.config"
@@ -191,17 +220,35 @@ export default {
       :machine-pools="machinePools"
       @error="e=>errors = e"
     />
-    <Banner v-else color="info" label="You do not have access to see this machine pool's configuration." />
+    <Banner
+      v-else-if="value.configMissing"
+      color="error"
+      label-key="cluster.machinePool.configNotFound"
+    />
+    <Banner
+      v-else
+      color="info"
+      label-key="cluster.machinePool.noAccessBanner"
+    />
 
-    <AdvancedSection :mode="mode" class="advanced">
-      <portal-target :name="'advanced-' + uuid" multiple />
+    <AdvancedSection
+      :mode="mode"
+      class="advanced"
+    >
+      <portal-target
+        :name="'advanced-' + uuid"
+        multiple
+      />
 
       <div class="spacer" />
       <div class="row">
         <div class="col span-4">
           <h3>
             {{ t('cluster.machinePool.autoReplace.label') }}
-            <i v-tooltip="t('cluster.machinePool.autoReplace.toolTip')" class="icon icon-info icon-lg" />
+            <i
+              v-tooltip="t('cluster.machinePool.autoReplace.toolTip')"
+              class="icon icon-info icon-lg"
+            />
           </h3>
           <UnitInput
             v-model.number="unhealthyNodeTimeoutInteger"
@@ -210,7 +257,7 @@ export default {
             :mode="mode"
             :output-modifier="true"
             :base-unit="t('cluster.machinePool.autoReplace.unit')"
-            @input="value.pool.unhealthyNodeTimeout = `${unhealthyNodeTimeoutInteger}m`"
+            @input="value.pool.unhealthyNodeTimeout = `${unhealthyNodeTimeoutInteger}s`"
           />
         </div>
         <div class="col span-4">
@@ -236,9 +283,15 @@ export default {
 
       <div class="spacer" />
 
-      <Taints v-model="value.pool.taints" :mode="mode" />
+      <Taints
+        v-model="value.pool.taints"
+        :mode="mode"
+      />
 
-      <portal-target :name="'advanced-footer-' + uuid" multiple />
+      <portal-target
+        :name="'advanced-footer-' + uuid"
+        multiple
+      />
     </AdvancedSection>
   </div>
 </template>

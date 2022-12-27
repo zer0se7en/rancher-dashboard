@@ -58,25 +58,25 @@ export default class extends SteveModel {
         type:           'dnsLabel',
       },
       {
-        nullable:       false,
-        path:           'spec',
-        required:       true,
-        type:           'array',
-        validators:     ['servicePort'],
+        nullable:   false,
+        path:       'spec',
+        required:   true,
+        type:       'array',
+        validators: ['servicePort'],
       },
       {
-        nullable:       true,
-        path:           'spec',
-        required:       true,
-        type:           'string',
-        validators:     ['clusterIp'],
+        nullable:   true,
+        path:       'spec',
+        required:   true,
+        type:       'string',
+        validators: ['clusterIp'],
       },
       {
-        nullable:       true,
-        path:           'spec',
-        required:       true,
-        type:           'array',
-        validators:     ['externalName'],
+        nullable:   true,
+        path:       'spec',
+        required:   true,
+        type:       'array',
+        validators: ['externalName'],
       },
     ];
   }
@@ -136,7 +136,11 @@ export default class extends SteveModel {
       let pods = [];
 
       if (podRelationship) {
-        pods = await this.$dispatch('cluster/findMatching', { type: POD, selector: podRelationship.selector }, { root: true });
+        pods = await this.$dispatch('cluster/findMatching', {
+          type:      POD,
+          selector:  podRelationship.selector,
+          namespace: this.namespace
+        }, { root: true });
       }
 
       return pods;
