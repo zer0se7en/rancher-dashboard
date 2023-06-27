@@ -1,6 +1,8 @@
 <script>
 import ResourceTable from '@shell/components/ResourceTable';
-import { WORKLOAD_TYPES, SCHEMA, NODE, POD } from '@shell/config/types';
+import {
+  WORKLOAD_TYPES, SCHEMA, NODE, POD, LIST_WORKLOAD_TYPES
+} from '@shell/config/types';
 import ResourceFetch from '@shell/mixins/resource-fetch';
 
 const schema = {
@@ -16,7 +18,7 @@ const schema = {
 const $loadingResources = ($route, $store) => {
   const allowedResources = [];
 
-  Object.values(WORKLOAD_TYPES).forEach((type) => {
+  Object.values(LIST_WORKLOAD_TYPES).forEach((type) => {
     // You may not have RBAC to see some of the types
     if ($store.getters['cluster/schemaFor'](type) ) {
       allowedResources.push(type);
@@ -44,11 +46,17 @@ export default {
   },
 
   async fetch() {
+    if (this.allTypes && this.loadResources.length) {
+      this.$initializeFetchData(this.loadResources[0], this.loadResources);
+    } else {
+      this.$initializeFetchData(this.$route.params.resource);
+    }
+
     try {
       const schema = this.$store.getters[`cluster/schemaFor`](NODE);
 
       if (schema) {
-        this.$store.dispatch('cluster/findAll', { type: NODE });
+        this.$fetchType(NODE);
       }
     } catch {}
 
@@ -123,20 +131,20 @@ export default {
     loadHeathResources() {
       // Fetch these in the background to populate workload health
       if ( this.allTypes ) {
-        this.$store.dispatch('cluster/findAll', { type: POD, opt: { namespaced: this.namespaceFilter } });
-        this.$store.dispatch('cluster/findAll', { type: WORKLOAD_TYPES.JOB, opt: { namespaced: this.namespaceFilter } });
+        this.$fetchType(POD);
+        this.$fetchType(WORKLOAD_TYPES.JOB);
       } else {
         const type = this.$route.params.resource;
 
-        if (type === WORKLOAD_TYPES.JOB) {
-          // Ignore job (we're fetching this anyway, plus they contain their own state)
+        if (type === WORKLOAD_TYPES.JOB || type === POD) {
+          // Ignore job and pods (we're fetching this anyway, plus they contain their own state)
           return;
         }
 
         if (type === WORKLOAD_TYPES.CRON_JOB) {
-          this.$store.dispatch('cluster/findAll', { type: WORKLOAD_TYPES.JOB, opt: { namespaced: this.namespaceFilter } });
+          this.$fetchType(WORKLOAD_TYPES.JOB);
         } else {
-          this.$store.dispatch('cluster/findAll', { type: POD, opt: { namespaced: this.namespaceFilter } });
+          this.$fetchType(POD);
         }
       }
     }

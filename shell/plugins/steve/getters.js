@@ -7,6 +7,8 @@ import SteveModel from './steve-class';
 import HybridModel, { cleanHybridResources } from './hybrid-class';
 import NormanModel from './norman-class';
 import { urlFor } from '@shell/plugins/dashboard-store/getters';
+import { normalizeType } from '@shell/plugins/dashboard-store/normalize';
+import pAndNFiltering from '@shell/utils/projectAndNamespaceFiltering.utils';
 
 export const STEVE_MODEL_TYPES = {
   NORMAN:  'norman',
@@ -41,6 +43,15 @@ export default {
         });
       });
     }
+
+    // `opt.namespaced` is either
+    // - a string representing a single namespace - add restriction to the url
+    // - an array of namespaces or projects - add restriction as a param
+    const namespaceProjectFilter = pAndNFiltering.checkAndCreateParam(opt);
+
+    if (namespaceProjectFilter) {
+      url += `${ (url.includes('?') ? '&' : '?') + namespaceProjectFilter }`;
+    }
     // End: Filter
 
     // Limit
@@ -71,18 +82,19 @@ export default {
   urlFor: (state, getters) => (type, id, opt) => {
     let url = urlFor(state, getters)(type, id, opt);
 
-    if (opt.namespaced) {
+    // `namespaced` is either
+    // - a string representing a single namespace - add restriction to the url
+    // - an array of namespaces or projects - add restriction as a param
+    if (opt.namespaced && !pAndNFiltering.isApplicable(opt)) {
       const parts = url.split('/');
 
       url = `${ parts.join('/') }/${ opt.namespaced }`;
-
-      return url;
     }
 
     return url;
   },
 
-  defaultModel: state => (obj) => {
+  defaultModel: (state) => (obj) => {
     const which = state.config.modelBaseClass || STEVE_MODEL_TYPES.BY_TYPE.STEVE;
 
     if ( which === STEVE_MODEL_TYPES.BY_TYPE ) {
@@ -130,13 +142,19 @@ export default {
 
       return data;
     }
+
+    // If the existing model has a cleanResource method, use it
+    if (existing?.cleanResource && typeof existing.cleanResource === 'function') {
+      return existing.cleanResource(data);
+    }
+
     const typeSuperClass = Object.getPrototypeOf(Object.getPrototypeOf(existing))?.constructor;
 
     return typeSuperClass === HybridModel ? cleanHybridResources(data) : data;
   },
 
   // Return all the pods for a given namespace
-  podsByNamespace: state => (namespace) => {
+  podsByNamespace: (state) => (namespace) => {
     const map = state.podsByNamespace[namespace];
 
     return map?.list || [];
@@ -144,6 +162,18 @@ export default {
 
   gcIgnoreTypes: () => {
     return GC_IGNORE_TYPES;
-  }
+  },
+
+  currentGeneration: (state) => (type) => {
+    type = normalizeType(type);
+
+    const cache = state.types[type];
+
+    if ( !cache ) {
+      return null;
+    }
+
+    return cache.generation;
+  },
 
 };

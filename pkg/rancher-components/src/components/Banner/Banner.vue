@@ -95,7 +95,7 @@ export default Vue.extend({
         <span v-else-if="messageLabel">{{ messageLabel }}</span>
         <span
           v-else
-          v-html="nlToBr(label)"
+          v-clean-html="nlToBr(label)"
         />
       </slot>
       <div
@@ -121,6 +121,7 @@ $icon-size: 24px;
   margin: 15px 0;
   position: relative;
   width: 100%;
+  color: var(--body-text);
 
   &__icon {
     width: $icon-size * 2;
@@ -162,6 +163,8 @@ $icon-size: 24px;
     line-height: 20px;
     width: 100%;
     border-left: solid $left-border-size transparent;
+    display: flex;
+    gap: 3px;
 
     .primary & {
       background: var(--primary);

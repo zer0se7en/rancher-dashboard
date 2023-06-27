@@ -1,5 +1,5 @@
 name: storybook
-env: 
+env:
     STORYBOOK_TOKEN: ${{ secrets.STORYBOOK_TOKEN }}
 on:
   push:
@@ -8,7 +8,6 @@ on:
   pull_request:
     branches:
       - master
-      - 'release-*'      
 jobs:
   storybook:
     runs-on: ubuntu-latest
@@ -17,7 +16,7 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '14.x'
+        node-version: '16.x'
     - name: Install packages
       run: yarn install
     - name: Build Storybook

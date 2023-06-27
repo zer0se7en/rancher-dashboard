@@ -5,8 +5,10 @@ import Masthead from './Masthead';
 import ResourceLoadingIndicator from './ResourceLoadingIndicator';
 import ResourceFetch from '@shell/mixins/resource-fetch';
 import IconMessage from '@shell/components/IconMessage.vue';
-
-export const ResourceListComponentName = 'ResourceList';
+import { ResourceListComponentName } from './resource-list.config';
+import { PanelLocation, ExtensionPoint } from '@shell/core/types';
+import ExtensionPanel from '@shell/components/ExtensionPanel';
+import { sameContents } from '@shell/utils/array';
 
 export default {
   name: ResourceListComponentName,
@@ -16,7 +18,8 @@ export default {
     ResourceTable,
     Masthead,
     ResourceLoadingIndicator,
-    IconMessage
+    IconMessage,
+    ExtensionPanel
   },
   mixins: [ResourceFetch],
 
@@ -97,6 +100,8 @@ export default {
       hasListComponent,
       showMasthead:                     showMasthead === undefined ? true : showMasthead,
       resource,
+      extensionType:                    ExtensionPoint.PANEL,
+      extensionLocation:                PanelLocation.RESOURCE_LIST,
       loadResources:                    [resource], // List of resources that will be loaded, this could be many (`Workloads`)
       hasFetch:                         false,
       // manual refresh
@@ -128,7 +133,8 @@ export default {
 
     showIncrementalLoadingIndicator() {
       return this.perfConfig?.incrementalLoading?.enabled;
-    }
+    },
+
   },
 
   watch: {
@@ -141,7 +147,11 @@ export default {
      *
      * This covers case 1
      */
-    namespaceFilter(neu) {
+    namespaceFilter(neu, old) {
+      if (sameContents(neu, old)) {
+        return;
+      }
+
       if (neu && !this.hasFetch) {
         this.$fetchType(this.resource);
       }
@@ -171,10 +181,7 @@ export default {
     icon="icon-filter_alt"
   >
     <template #message>
-      <span
-        class="filter"
-        v-html="t('resourceList.nsFiltering', { resource: $store.getters['type-map/labelFor'](schema, 2) || customTypeDisplay }, true)"
-      />
+      {{ t('resourceList.nsFiltering') }}
     </template>
   </IconMessage>
   <div v-else>
@@ -186,12 +193,18 @@ export default {
       :show-incremental-loading-indicator="showIncrementalLoadingIndicator"
       :load-resources="loadResources"
       :load-indeterminate="loadIndeterminate"
-      :load-namespace="namespaceFilter"
     >
       <template slot="extraActions">
         <slot name="extraActions" />
       </template>
     </Masthead>
+    <!-- Extensions area -->
+    <ExtensionPanel
+      :resource="{}"
+      :type="extensionType"
+      :location="extensionLocation"
+    />
+
     <div v-if="hasListComponent">
       <component
         :is="listComponent"

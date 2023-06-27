@@ -69,7 +69,7 @@ export default {
 
     // Filter first by namespace if one is provided, since this is efficient
     if (namespace) {
-      all = all.filter(obj => obj.namespace === namespace);
+      all = all.filter((obj) => obj.namespace === namespace);
     }
 
     garbageCollect.gcUpdateLastAccessed({
@@ -272,6 +272,12 @@ export default {
     }
 
     return false;
+  },
+
+  haveNamespace: (state, getters) => (type) => {
+    type = getters.normalizeType(type);
+
+    return state.types[type]?.haveNamespace || null;
   },
 
   haveSelector: (state, getters) => (type, selector) => {

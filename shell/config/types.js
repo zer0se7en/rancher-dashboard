@@ -54,6 +54,7 @@ export const NETWORK_POLICY = 'networking.k8s.io.networkpolicy';
 export const POD = 'pod';
 export const POD_DISRUPTION_BUDGET = 'policy.poddisruptionbudget';
 export const PSP = 'policy.podsecuritypolicy';
+export const PSPS = 'policy.podsecuritypolicies';
 export const PV = 'persistentvolume';
 export const PVC = 'persistentvolumeclaim';
 export const RESOURCE_QUOTA = 'resourcequota';
@@ -65,6 +66,8 @@ export const STORAGE_CLASS = 'storage.k8s.io.storageclass';
 export const CSI_DRIVER = 'storage.k8s.io.csidriver';
 export const OBJECT_META = 'io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta';
 export const NETWORK_ATTACHMENT = 'k8s.cni.cncf.io.networkattachmentdefinition';
+export const USER = 'user';
+export const GROUP = 'group';
 
 export const RBAC = {
   ROLE:                 'rbac.authorization.k8s.io.role',
@@ -91,6 +94,11 @@ const {
 } = WORKLOAD_TYPES;
 
 export const SCALABLE_WORKLOAD_TYPES = scalableWorkloads;
+
+export const LIST_WORKLOAD_TYPES = {
+  ...WORKLOAD_TYPES,
+  POD
+};
 
 export const METRIC = {
   NODE: 'metrics.k8s.io.nodemetrics',
@@ -174,6 +182,8 @@ export const MANAGEMENT = {
   GLOBAL_ROLE:                   'management.cattle.io.globalrole',
   GLOBAL_ROLE_BINDING:           'management.cattle.io.globalrolebinding',
   POD_SECURITY_POLICY_TEMPLATE:  'management.cattle.io.podsecuritypolicytemplate',
+  PSP_TEMPLATE_BINDING:          'management.cattle.io.podsecuritypolicytemplateprojectbinding',
+  PSA:                           'management.cattle.io.podsecurityadmissionconfigurationtemplate',
   MANAGED_CHART:                 'management.cattle.io.managedchart',
   USER_NOTIFICATION:             'management.cattle.io.rancherusernotification',
   GLOBAL_DNS_PROVIDER:           'management.cattle.io.globaldnsprovider',
@@ -196,14 +206,16 @@ export const CAPI = {
 // Base: /k8s/clusters/<id>/v1/
 
 export const FLEET = {
-  BUNDLE:            'fleet.cattle.io.bundle',
-  BUNDLE_DEPLOYMENT: 'fleet.cattle.io.bundledeployment',
-  CLUSTER:           'fleet.cattle.io.cluster',
-  CLUSTER_GROUP:     'fleet.cattle.io.clustergroup',
-  DASHBOARD:         'fleet.cattle.io.dashboard',
-  GIT_REPO:          'fleet.cattle.io.gitrepo',
-  WORKSPACE:         'management.cattle.io.fleetworkspace',
-  TOKEN:             'fleet.cattle.io.clusterregistrationtoken',
+  BUNDLE:                   'fleet.cattle.io.bundle',
+  BUNDLE_DEPLOYMENT:        'fleet.cattle.io.bundledeployment',
+  CLUSTER:                  'fleet.cattle.io.cluster',
+  CLUSTER_GROUP:            'fleet.cattle.io.clustergroup',
+  DASHBOARD:                'fleet.cattle.io.dashboard',
+  GIT_REPO:                 'fleet.cattle.io.gitrepo',
+  WORKSPACE:                'management.cattle.io.fleetworkspace',
+  TOKEN:                    'fleet.cattle.io.clusterregistrationtoken',
+  BUNDLE_NAMESPACE_MAPPING: 'fleet.cattle.io.bundlenamespacemapping',
+  GIT_REPO_RESTRICTION:     'fleet.cattle.io.gitreporestriction'
 };
 
 export const GATEKEEPER = {
@@ -274,10 +286,11 @@ export const VIRTUAL_TYPES = {
 
 // harvester
 export const HCI = {
-  CLUSTER:   'harvesterhci.io.management.cluster',
-  DASHBOARD: 'harvesterhci.io.dashboard',
-  IMAGE:     'harvesterhci.io.virtualmachineimage',
-  SETTING:   'harvesterhci.io.setting',
+  CLUSTER:          'harvesterhci.io.management.cluster',
+  DASHBOARD:        'harvesterhci.io.dashboard',
+  IMAGE:            'harvesterhci.io.virtualmachineimage',
+  SETTING:          'harvesterhci.io.setting',
+  HARVESTER_CONFIG: 'rke-machine-config.cattle.io.harvesterconfig',
 };
 
 export const VIRTUAL_HARVESTER_PROVIDER = 'harvester';

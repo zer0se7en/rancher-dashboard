@@ -38,8 +38,13 @@ export default {
   mixins: [PageHeaderActions],
 
   fetch() {
-    this.$store.dispatch('management/findAll', { type: CAPI.RANCHER_CLUSTER });
-    this.$store.dispatch('management/findAll', { type: MANAGEMENT.CLUSTER });
+    if ( this.$store.getters['management/schemaFor'](CAPI.RANCHER_CLUSTER) ) {
+      this.$store.dispatch('management/findAll', { type: CAPI.RANCHER_CLUSTER });
+    }
+
+    if ( this.$store.getters['management/schemaFor'](MANAGEMENT.CLUSTER) ) {
+      this.$store.dispatch('management/findAll', { type: MANAGEMENT.CLUSTER });
+    }
 
     if ( this.$store.getters['management/canList'](CAPI.MACHINE) ) {
       this.$store.dispatch('management/findAll', { type: CAPI.MACHINE });
@@ -47,6 +52,15 @@ export default {
 
     if ( this.$store.getters['management/canList'](MANAGEMENT.NODE) ) {
       this.$store.dispatch('management/findAll', { type: MANAGEMENT.NODE });
+    }
+
+    // We need to fetch node pools and node templates in order to correctly show the provider for RKE1 clusters
+    if ( this.$store.getters['management/canList'](MANAGEMENT.NODE_POOL) ) {
+      this.$store.dispatch('management/findAll', { type: MANAGEMENT.NODE_POOL });
+    }
+
+    if ( this.$store.getters['management/canList'](MANAGEMENT.NODE_TEMPLATE) ) {
+      this.$store.dispatch('management/findAll', { type: MANAGEMENT.NODE_TEMPLATE });
     }
   },
 
@@ -89,7 +103,7 @@ export default {
     canCreateCluster() {
       const schema = this.$store.getters['management/schemaFor'](CAPI.RANCHER_CLUSTER);
 
-      return !!schema?.collectionMethods.find(x => x.toLowerCase() === 'post');
+      return !!schema?.collectionMethods.find((x) => x.toLowerCase() === 'post');
     },
 
     manageLocation() {
@@ -146,7 +160,7 @@ export default {
           value:         'nameDisplay',
           sort:          ['nameSort'],
           canBeVariable: true,
-          getValue:      row => row.mgmt?.nameDisplay
+          getValue:      (row) => row.mgmt?.nameDisplay
         },
         {
           label:     this.t('landing.clusters.provider'),
@@ -192,7 +206,7 @@ export default {
     ...mapGetters(['currentCluster', 'defaultClusterId']),
 
     kubeClusters() {
-      return filterHiddenLocalCluster(filterOnlyKubernetesClusters(this.provClusters || []), this.$store);
+      return filterHiddenLocalCluster(filterOnlyKubernetesClusters(this.provClusters || [], this.$store), this.$store);
     }
   },
 
@@ -206,6 +220,8 @@ export default {
   beforeDestroy() {
     this.$store.dispatch('management/forgetType', CAPI.MACHINE);
     this.$store.dispatch('management/forgetType', MANAGEMENT.NODE);
+    this.$store.dispatch('management/forgetType', MANAGEMENT.NODE_POOL);
+    this.$store.dispatch('management/forgetType', MANAGEMENT.NODE_TEMPLATE);
   },
 
   methods: {
@@ -301,11 +317,13 @@ export default {
             data-testid="changelog-banner"
             color="info whats-new"
           >
-            <div>{{ t('landing.seeWhatsNew') }}</div>
+            <div>
+              {{ t('landing.seeWhatsNew') }}
+            </div>
             <a
               class="hand"
               @click.prevent.stop="showWhatsNew"
-            ><span v-html="t('landing.whatsNewLink')" /></a>
+            ><span v-clean-html="t('landing.whatsNewLink')" /></a>
           </Banner>
         </div>
       </div>
@@ -318,15 +336,17 @@ export default {
           >
             <div class="col span-12">
               <Banner
-                color="set-login-page"
+                color="set-login-page mt-0"
                 :closable="true"
                 @close="closeSetLoginBanner()"
               >
-                <div>{{ t('landing.landingPrefs.title') }}</div>
+                <div>
+                  {{ t('landing.landingPrefs.title') }}
+                </div>
                 <a
                   class="hand mr-20"
                   @click.prevent.stop="showUserPrefs"
-                ><span v-html="t('landing.landingPrefs.userPrefs')" /></a>
+                ><span v-clean-html="t('landing.landingPrefs.userPrefs')" /></a>
               </Banner>
             </div>
           </div>
@@ -397,7 +417,7 @@ export default {
                       </span>
                       <i
                         v-if="row.unavailableMachines"
-                        v-tooltip="row.unavailableMachines"
+                        v-clean-tooltip="row.unavailableMachines"
                         class="conditions-alert-icon icon-alert icon"
                       />
                     </div>
@@ -458,19 +478,19 @@ export default {
     }
   }
 
-  .banner.info.whats-new, .banner.set-login-page {
-    border: 0;
-    margin-top: 0;
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    > div {
-      flex: 1;
-    }
-    > a {
-      align-self: flex-end;
+  .set-login-page, .whats-new {
+    > ::v-deep .banner__content {
+      display: flex;
+
+      > div {
+        flex: 1;
+      }
+      > a {
+        align-self: flex-end;
+      }
     }
   }
+
   .banner.set-login-page {
     border: 1px solid var(--border);
   }

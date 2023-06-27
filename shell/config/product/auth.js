@@ -27,7 +27,7 @@ export function init(store) {
 
   product({
     ifHaveType:          new RegExp(`${ MANAGEMENT.USER }|${ MANAGEMENT.AUTH_CONFIG }`, 'i'),
-    ifHaveVerb:          'PUT',
+    ifHaveVerb:          'GET',
     ifFeature:           MULTI_CLUSTER,
     inStore:             'management',
     icon:                'user',
@@ -43,7 +43,8 @@ export function init(store) {
     name:       'config',
     weight:     -1,
     route:      { name: 'c-cluster-auth-config' },
-    ifHaveType: MANAGEMENT.AUTH_CONFIG
+    ifHaveType: MANAGEMENT.AUTH_CONFIG,
+    ifHaveVerb: 'PUT'
   });
 
   virtualType({
@@ -103,8 +104,8 @@ export function init(store) {
       });
 
       const uniquePrincipalIds = uniq(globalRoleBindings
-        .filter(grb => !!grb.groupPrincipalName)
-        .map(grb => grb.groupPrincipalName)
+        .filter((grb) => !!grb.groupPrincipalName)
+        .map((grb) => grb.groupPrincipalName)
       );
 
       const allPrincipalsP = uniquePrincipalIds
@@ -124,8 +125,8 @@ export function init(store) {
       const allPrincipals = await Promise.all(allPrincipalsP);
 
       return allPrincipals
-        .filter(p => !!p)
-        .map(p => ({
+        .filter((p) => !!p)
+        .map((p) => ({
           ...p,
           type: NORMAN.SPOOFED.GROUP_PRINCIPAL
         }));

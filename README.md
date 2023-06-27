@@ -5,7 +5,7 @@ Rancher Dashboard is the UI that powers [Rancher](https://www.rancher.com/produc
 
 Developer documentation and documentation for our UI components is available here - [Rancher UI Devkit](https://rancher.github.io/dashboard/).
 
-Rancher Dashboard supports an extension mechanism that allows developers to build there own extensions that can be developed independently of Rancher and loaded into a deployed Rancher installation to extend its functionality. You can learn more from our [Rancher Extensions Docs](https://rancher.github.io/dashboard/plugins/introduction).
+Rancher Dashboard supports an extension mechanism that allows developers to build there own extensions that can be developed independently of Rancher and loaded into a deployed Rancher installation to extend its functionality. You can learn more from our [Rancher Extensions Docs](https://rancher.github.io/dashboard/extensions/introduction).
 
 
 # What is it?
@@ -20,7 +20,7 @@ For more information, see our [UI Walk-through documentation](https://rancher.gi
 
 - [Rancher UI Devkit](https://rancher.github.io/dashboard/) - for our documentation home
 - [Developer Quick Start documentation](https://rancher.github.io/dashboard/getting-started/quickstart) - to get the Rancher Dashboard running
-- [Rancher Extensions Docs](https://rancher.github.io/dashboard/plugins/introduction) - to get started with Rancher Extensions 
+- [Rancher Extensions Docs](https://rancher.github.io/dashboard/extensions/introduction) - to get started with Rancher Extensions 
 
 ## Contributing
 
@@ -28,7 +28,7 @@ For developers, after reading through the introduction on this page, head over t
 
 License
 =======
-Copyright (c) 2014-2022 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2014-2023 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

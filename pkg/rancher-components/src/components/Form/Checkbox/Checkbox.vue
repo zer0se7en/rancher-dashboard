@@ -5,6 +5,8 @@ import { addObject, removeObject } from '@shell/utils/array';
 import cloneDeep from 'lodash/cloneDeep';
 
 export default Vue.extend({
+  name: 'Checkbox',
+
   props: {
     /**
      * The checkbox value.
@@ -200,7 +202,7 @@ export default Vue.extend({
      * @param value A collection of values for the checkbox.
      */
     findTrueValues(value: boolean[]): boolean {
-      return value.find(v => v === this.valueWhenTrue) || false;
+      return value.find((v) => v === this.valueWhenTrue) || false;
     }
   }
 });
@@ -249,12 +251,12 @@ export default Vue.extend({
           <template v-else-if="label">{{ label }}</template>
           <i
             v-if="tooltipKey"
-            v-tooltip="t(tooltipKey)"
+            v-clean-tooltip="t(tooltipKey)"
             class="checkbox-info icon icon-info icon-lg"
           />
           <i
             v-else-if="tooltip"
-            v-tooltip="tooltip"
+            v-clean-tooltip="tooltip"
             class="checkbox-info icon icon-info icon-lg"
           />
         </slot>

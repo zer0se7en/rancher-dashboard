@@ -61,6 +61,12 @@ export default {
       type:    String,
       default: null,
     },
+
+    // Runs this command immediately after connecting
+    commandOnFirstConnect: {
+      type:    String,
+      default: null
+    }
   },
 
   data() {
@@ -90,7 +96,7 @@ export default {
     },
 
     containerChoices() {
-      return this.pod?.spec?.containers?.map(x => x.name) || [];
+      return this.pod?.spec?.containers?.map((x) => x.name) || [];
     },
   },
 
@@ -158,10 +164,10 @@ export default {
 
       const terminal = new xterm.Terminal({
         theme: {
-          background: docStyle.getPropertyValue('--terminal-bg').trim(),
-          cursor:     docStyle.getPropertyValue('--terminal-cursor').trim(),
-          selection:  docStyle.getPropertyValue('--terminal-selection').trim(),
-          foreground: docStyle.getPropertyValue('--terminal-text').trim(),
+          background:          docStyle.getPropertyValue('--terminal-bg').trim(),
+          foreground:          docStyle.getPropertyValue('--terminal-text').trim(),
+          cursor:              docStyle.getPropertyValue('--terminal-cursor').trim(),
+          selectionBackground: docStyle.getPropertyValue('--terminal-selection').trim(),
         },
         ...this.xtermConfig,
       });
@@ -267,6 +273,10 @@ export default {
         this.isOpening = false;
         this.fit();
         this.flush();
+
+        if (this.commandOnFirstConnect) {
+          this.terminal.paste(`${ this.commandOnFirstConnect }`);
+        }
       });
 
       this.socket.addEventListener(EVENT_DISCONNECTED, (e) => {
@@ -441,6 +451,7 @@ export default {
     display: inline-block;
     min-width: 200px;
     height: 30px;
+    min-height: 30px;
     width: initial;
   }
 }

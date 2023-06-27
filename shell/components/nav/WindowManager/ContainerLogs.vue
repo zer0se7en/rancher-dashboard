@@ -12,7 +12,7 @@ import VirtualList from 'vue-virtual-scroll-list';
 import LogItem from '@shell/components/LogItem';
 
 import { escapeRegex } from '@shell/utils/string';
-import { HARVESTER_NAME as VIRTUAL } from '@shell/config/product/harvester-manager';
+import { HARVESTER_NAME as VIRTUAL } from '@shell/config/features';
 
 import Socket, {
   EVENT_CONNECTED,
@@ -106,8 +106,8 @@ export default {
     containerChoices() {
       const isHarvester = this.$store.getters['currentProduct'].inStore === VIRTUAL;
 
-      const containers = (this.pod?.spec?.containers || []).map(x => x.name);
-      const initContainers = (this.pod?.spec?.initContainers || []).map(x => x.name);
+      const containers = (this.pod?.spec?.containers || []).map((x) => x.name);
+      const initContainers = (this.pod?.spec?.initContainers || []).map((x) => x.name);
 
       return isHarvester ? [] : [...containers, ...initContainers];
     },
@@ -631,6 +631,7 @@ export default {
       display: inline-block;
       min-width: 200px;
       height: 30px;
+      min-height: 30px;
       width: initial;
     }
   }

@@ -119,7 +119,7 @@ export default {
     <h3>
       {{ t('registryConfig.header') }}
       <i
-        v-tooltip="t('registryConfig.toolTip')"
+        v-clean-tooltip="t('registryConfig.toolTip')"
         class="icon icon-info"
       />
     </h3>
@@ -159,6 +159,7 @@ export default {
           <div class="col span-6">
             <SecretSelector
               v-model="row.value.tlsSecretName"
+              in-store="management"
               :mode="mode"
               :types="[TLS]"
               :namespace="value.metadata.namespace"

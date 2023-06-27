@@ -109,8 +109,8 @@ export default {
       matches.push(emptyMatch(true));
     }
 
-    const globalOutputRefs = (this.value.spec.globalOutputRefs || []).map(ref => ({ label: ref, value: ref }));
-    const localOutputRefs = (this.value.spec.localOutputRefs || []).map(ref => ({ label: ref, value: ref }));
+    const globalOutputRefs = (this.value.spec.globalOutputRefs || []).map((ref) => ({ label: ref, value: ref }));
+    const localOutputRefs = (this.value.spec.localOutputRefs || []).map((ref) => ({ label: ref, value: ref }));
 
     return {
       formSupported,
@@ -309,7 +309,7 @@ export default {
 
         const select = match.select || {};
         const exclude = match.exclude || {};
-        const allValuesAreEmpty = o => Object.values(o).every(isEmpty);
+        const allValuesAreEmpty = (o) => Object.values(o).every(isEmpty);
 
         return allValuesAreEmpty(select) && allValuesAreEmpty(exclude);
       });
@@ -329,7 +329,7 @@ export default {
       cm.execCommand('unfold');
     },
     isTag(options, option) {
-      return !options.find(o => o.value === option.value);
+      return !options.find((o) => o.value === option.value);
     }
   }
 };
@@ -433,7 +433,7 @@ export default {
           <template #selected-option="option">
             <i
               v-if="isTag(clusterOutputChoices, option)"
-              v-tooltip="t('logging.flow.clusterOutputs.doesntExistTooltip')"
+              v-clean-tooltip="t('logging.flow.clusterOutputs.doesntExistTooltip')"
               class="icon icon-info status-icon text-warning"
             />
             {{ option.label }}
@@ -454,7 +454,7 @@ export default {
           <template #selected-option="option">
             <i
               v-if="isTag(outputChoices, option)"
-              v-tooltip="t('logging.flow.outputs.doesntExistTooltip')"
+              v-clean-tooltip="t('logging.flow.outputs.doesntExistTooltip')"
               class="icon icon-info status-icon text-warning"
             />
             {{ option.label }}
